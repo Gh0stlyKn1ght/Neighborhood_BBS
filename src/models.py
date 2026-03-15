@@ -87,11 +87,72 @@ class Database:
             )
         ''')
         
+        # Admin users table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS admin_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                email TEXT,
+                role TEXT DEFAULT 'moderator',
+                is_active BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP
+            )
+        ''')
+        
+        # Banned devices table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS banned_devices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id TEXT UNIQUE NOT NULL,
+                device_type TEXT,
+                mac_address TEXT,
+                ip_address TEXT,
+                ban_reason TEXT,
+                banned_by TEXT NOT NULL,
+                banned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP,
+                is_active BOOLEAN DEFAULT 1
+            )
+        ''')
+        
+        # Network configuration table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS network_config (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                setting_name TEXT UNIQUE NOT NULL,
+                setting_value TEXT NOT NULL,
+                setting_type TEXT DEFAULT 'string',
+                description TEXT,
+                updated_by TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Theme settings table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS themes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                theme_name TEXT UNIQUE NOT NULL,
+                primary_color TEXT,
+                secondary_color TEXT,
+                background_color TEXT,
+                text_color TEXT,
+                font_family TEXT,
+                is_active BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
         # Create indexes
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_room_id ON messages(room_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(category)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_banned_devices_active ON banned_devices(is_active)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_themes_active ON themes(is_active)')
         
         conn.commit()
         conn.close()
@@ -251,3 +312,248 @@ class Post:
         conn.commit()
         conn.close()
         return reply_id
+
+
+class AdminUser:
+    """Admin user model"""
+    
+    @staticmethod
+    def create(username, password_hash, email, role='moderator'):
+        """Create a new admin user"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                '''INSERT INTO admin_users (username, password_hash, email, role) 
+                   VALUES (?, ?, ?, ?)''',
+                (username, password_hash, email, role)
+            )
+            conn.commit()
+            user_id = cursor.lastrowid
+            conn.close()
+            return user_id
+        except sqlite3.IntegrityError:
+            conn.close()
+            return None
+    
+    @staticmethod
+    def get_by_username(username):
+        """Get admin user by username"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM admin_users WHERE username = ?', (username,))
+        user = cursor.fetchone()
+        conn.close()
+        return dict(user) if user else None
+    
+    @staticmethod
+    def update_last_login(user_id):
+        """Update last login timestamp"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE admin_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+            (user_id,)
+        )
+        conn.commit()
+        conn.close()
+
+
+class BannedDevice:
+    """Banned device model"""
+    
+    @staticmethod
+    def ban_device(device_id, device_type, mac_address, ip_address, ban_reason, banned_by, expires_at=None):
+        """Ban a device"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                '''INSERT INTO banned_devices 
+                   (device_id, device_type, mac_address, ip_address, ban_reason, banned_by, expires_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                (device_id, device_type, mac_address, ip_address, ban_reason, banned_by, expires_at)
+            )
+            conn.commit()
+            ban_id = cursor.lastrowid
+            conn.close()
+            return ban_id
+        except sqlite3.IntegrityError:
+            conn.close()
+            return None
+    
+    @staticmethod
+    def get_all_bans(active_only=True):
+        """Get all banned devices"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        if active_only:
+            cursor.execute(
+                '''SELECT * FROM banned_devices 
+                   WHERE is_active = 1 
+                   ORDER BY banned_at DESC'''
+            )
+        else:
+            cursor.execute('SELECT * FROM banned_devices ORDER BY banned_at DESC')
+        bans = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return bans
+    
+    @staticmethod
+    def get_by_device_id(device_id):
+        """Get ban info by device ID"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM banned_devices WHERE device_id = ? AND is_active = 1', (device_id,))
+        ban = cursor.fetchone()
+        conn.close()
+        return dict(ban) if ban else None
+    
+    @staticmethod
+    def get_by_ip(ip_address):
+        """Get ban info by IP address"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'SELECT * FROM banned_devices WHERE ip_address = ? AND is_active = 1',
+            (ip_address,)
+        )
+        ban = cursor.fetchone()
+        conn.close()
+        return dict(ban) if ban else None
+    
+    @staticmethod
+    def unban_device(device_id):
+        """Unban a device"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE banned_devices SET is_active = 0 WHERE device_id = ?',
+            (device_id,)
+        )
+        conn.commit()
+        conn.close()
+
+
+class NetworkConfig:
+    """Network configuration model"""
+    
+    @staticmethod
+    def set_config(setting_name, setting_value, setting_type='string', description='', updated_by='system'):
+        """Set or update network configuration"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                '''INSERT OR REPLACE INTO network_config 
+                   (setting_name, setting_value, setting_type, description, updated_by) 
+                   VALUES (?, ?, ?, ?, ?)''',
+                (setting_name, setting_value, setting_type, description, updated_by)
+            )
+            conn.commit()
+            conn.close()
+            return True
+        except Exception:
+            conn.close()
+            return False
+    
+    @staticmethod
+    def get_config(setting_name):
+        """Get network configuration setting"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM network_config WHERE setting_name = ?', (setting_name,))
+        config = cursor.fetchone()
+        conn.close()
+        return dict(config) if config else None
+    
+    @staticmethod
+    def get_all_configs():
+        """Get all network configurations"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM network_config ORDER BY setting_name')
+        configs = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return configs
+
+
+class ThemeSettings:
+    """Theme settings model"""
+    
+    @staticmethod
+    def create_theme(theme_name, primary_color='#007bff', secondary_color='#6c757d', 
+                    background_color='#ffffff', text_color='#000000', font_family='Arial, sans-serif'):
+        """Create a new theme"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                '''INSERT INTO themes 
+                   (theme_name, primary_color, secondary_color, background_color, text_color, font_family)
+                   VALUES (?, ?, ?, ?, ?, ?)''',
+                (theme_name, primary_color, secondary_color, background_color, text_color, font_family)
+            )
+            conn.commit()
+            theme_id = cursor.lastrowid
+            conn.close()
+            return theme_id
+        except sqlite3.IntegrityError:
+            conn.close()
+            return None
+    
+    @staticmethod
+    def get_all_themes():
+        """Get all themes"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM themes ORDER BY created_at DESC')
+        themes = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return themes
+    
+    @staticmethod
+    def get_active_theme():
+        """Get the currently active theme"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM themes WHERE is_active = 1 LIMIT 1')
+        theme = cursor.fetchone()
+        conn.close()
+        return dict(theme) if theme else None
+    
+    @staticmethod
+    def set_active_theme(theme_id):
+        """Set a theme as active (only one can be active)"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('UPDATE themes SET is_active = 0')
+        cursor.execute('UPDATE themes SET is_active = 1 WHERE id = ?', (theme_id,))
+        conn.commit()
+        conn.close()
+    
+    @staticmethod
+    def update_theme(theme_id, **kwargs):
+        """Update theme settings"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        allowed_fields = ['primary_color', 'secondary_color', 'background_color', 'text_color', 'font_family']
+        
+        for field, value in kwargs.items():
+            if field in allowed_fields:
+                cursor.execute(
+                    f'UPDATE themes SET {field} = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                    (value, theme_id)
+                )
+        
+        conn.commit()
+        conn.close()
+    
+    @staticmethod
+    def delete_theme(theme_id):
+        """Delete a theme"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM themes WHERE id = ?', (theme_id,))
+        conn.commit()
+        conn.close()

@@ -2,11 +2,10 @@
 Flask application factory and configuration
 """
 
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, send_from_directory, request, jsonify
 from flask_socketio import SocketIO
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_secsrf import SeaSurf
 import os
 from pathlib import Path
 
@@ -16,7 +15,6 @@ cors_origins = [origin.strip() for origin in cors_origins if origin.strip()]
 
 socketio = SocketIO(cors_allowed_origins=cors_origins)
 limiter = Limiter(key_func=get_remote_address)
-csrf = SeaSurf()  # CSRF protection
 
 
 def create_app(config_file=None):
@@ -48,20 +46,76 @@ def create_app(config_file=None):
     app.config['DEBUG'] = os.environ.get('DEBUG', 'false').lower() == 'true'
     app.config['JSON_SORT_KEYS'] = False
     
+    # Session configuration for admin panel
+    app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() == 'true'
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['PERMANENT_SESSION_LIFETIME'] = int(os.environ.get('ADMIN_SESSION_TIMEOUT', 3600))
+    
     # Max connections
     app.config['MAX_CONNECTIONS'] = int(os.environ.get('MAX_CONNECTIONS', 100))
     
     # Initialize extensions
     socketio.init_app(app)
     limiter.init_app(app)
-    csrf.init_app(app)
 
     # Register blueprints
     from chat.routes import chat_bp
     from board.routes import board_bp
+    from admin.routes import admin_bp
 
     app.register_blueprint(chat_bp)
     app.register_blueprint(board_bp)
+    app.register_blueprint(admin_bp)
+
+    # Middleware for device ban checking
+    @app.before_request
+    def check_device_ban():
+        """Check if requesting device is banned"""
+        from models import BannedDevice
+        
+        # Skip ban check for admin routes and static files
+        if request.path.startswith('/api/admin') or request.path.startswith('/static') or request.path.startswith('/admin'):
+            return
+        
+        # Get device identifier from request
+        device_id = request.headers.get('X-Device-ID', request.args.get('device_id'))
+        ip_address = get_remote_address()
+        
+        # Check if device is banned
+        if device_id:
+            ban = BannedDevice.get_by_device_id(device_id)
+            if ban:
+                return jsonify({'error': 'Device banned', 'reason': ban.get('ban_reason')}), 403
+        
+        # Check if IP is banned
+        ban = BannedDevice.get_by_ip(ip_address)
+        if ban:
+            return jsonify({'error': 'IP banned', 'reason': ban.get('ban_reason')}), 403
+
+    # Initialize chat log cleanup scheduler
+    def init_chat_log_scheduler():
+        """Initialize chat log cleanup scheduler on app startup"""
+        try:
+            from utils.chat_log_manager import schedule_daily_chat_log_cleanup, get_chat_log_retention_config
+            import logging
+            
+            logger = logging.getLogger(__name__)
+            
+            # Get retention setting from config
+            retention_days = get_chat_log_retention_config()
+            
+            # Schedule cleanup
+            schedule_daily_chat_log_cleanup(retention_days)
+            logger.info(f"Chat log cleanup scheduled: daily deletion of logs older than {retention_days} days")
+        
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to initialize chat log scheduler: {e}")
+    
+    # Schedule chat log cleanup on app startup
+    with app.app_context():
+        init_chat_log_scheduler()
 
     # Security headers
     @app.after_request
@@ -99,6 +153,23 @@ def create_app(config_file=None):
             return render_template('index.html')
         except Exception as e:
             return {'error': 'Could not load home page', 'detail': str(e)}, 500
+    
+    # Admin panel pages
+    @app.route('/admin-login.html')
+    def admin_login_page():
+        """Render admin login page"""
+        try:
+            return render_template('admin-login.html')
+        except Exception as e:
+            return {'error': 'Could not load admin login', 'detail': str(e)}, 500
+    
+    @app.route('/admin/dashboard.html')
+    def admin_dashboard_page():
+        """Render admin dashboard page"""
+        try:
+            return render_template('admin-dashboard.html')
+        except Exception as e:
+            return {'error': 'Could not load admin dashboard', 'detail': str(e)}, 500
     
     # Static files
     @app.route('/static/<path:path>')
