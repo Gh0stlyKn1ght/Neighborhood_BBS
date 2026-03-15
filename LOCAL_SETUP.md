@@ -302,6 +302,61 @@ LOG_LEVEL=WARNING  # Only warnings and errors
 
 ---
 
+## Connect WiFi Devices (ESP8266/ESP32) 📡
+
+The local server can host IoT devices like ESP8266 microcontrollers:
+
+### Step 1: Configure Device
+Edit [firmware/esp8266/config.py](firmware/esp8266/config.py):
+```python
+SSID = "Your_WiFi_SSID"                # Your WiFi network
+PASSWORD = "Your_WiFi_Password"        # WiFi password
+SERVER_HOST = "192.168.1.100"          # Your computer's IP (local network only!)
+SERVER_PORT = 8080                     # Same port as server
+DEVICE_NAME = "ESP8266_Living_Room"    # Unique device name
+```
+
+**Find your computer's IP:**
+```powershell
+# Windows
+ipconfig
+
+# Mac/Linux
+ifconfig | grep inet
+```
+
+### Step 2: Flash MicroPython Firmware
+Connect ESP8266 via USB and run:
+```bash
+pip install esptool
+esptool.py --port COM3 erase_flash
+esptool.py --port COM3 write_flash 0 micropython.bin
+```
+
+### Step 3: Upload Application
+```bash
+pip install adafruit-ampy
+ampy --port COM3 put firmware/esp8266/main.py
+ampy --port COM3 put firmware/esp8266/config.py
+```
+
+### Step 4: Device Connects Automatically
+The device will:
+1. Connect to your WiFi
+2. Communicate with your local BBS server
+3. Appear in admin panel for monitoring/management
+4. Can be banned or configured as needed
+
+### Device Management in Admin Panel
+- **Monitor:** View in Hardware Logs
+- **Control:** Ban devices by ID/MAC/IP
+- **Network:** Configure mesh topology
+- **Status:** See real-time connections
+
+**Full documentation:** [firmware/esp8266/README.md](firmware/esp8266/README.md)
+
+---
+
 ## Accessing from Other Devices
 
 ### Local Network Access

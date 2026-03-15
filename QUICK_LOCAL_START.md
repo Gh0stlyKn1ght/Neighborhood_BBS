@@ -57,6 +57,38 @@ chmod +x scripts/setup-local.sh scripts/run-local.sh
 
 ---
 
+## Connect WiFi Devices (ESP8266/ESP32) 📡
+
+Once the local server is running, you can connect IoT devices:
+
+### Quick Setup
+1. Configure `firmware/esp8266/config.py`:
+   ```python
+   SSID = "Your_WiFi_SSID"
+   PASSWORD = "Your_WiFi_Password"
+   SERVER_HOST = "192.168.1.100"  # Your computer's local IP
+   SERVER_PORT = 8080
+   ```
+
+2. Flash MicroPython to ESP8266:
+   ```bash
+   esptool.py --port COM3 erase_flash
+   esptool.py --port COM3 write_flash 0 micropython.bin
+   ```
+
+3. Upload code:
+   ```bash
+   ampy --port COM3 put firmware/esp8266/main.py
+   ```
+
+4. Device automatically connects to your BBS!
+
+**See:** [firmware/esp8266/README.md](firmware/esp8266/README.md) for detailed instructions
+
+**Manage devices in Admin Panel:** Device banning, monitoring, mesh networks
+
+---
+
 ## Manual Setup (Any OS)
 
 ### 1. Install Python
@@ -116,7 +148,13 @@ http://localhost:8080
 
 ## What's Next?
 
-### 👥 Add Users
+### � Add WiFi Devices
+Connect ESP8266/ESP32 nodes to your BBS:
+- See [firmware/esp8266/README.md](firmware/esp8266/README.md)
+- Automatic discovery and management
+- Monitor hardware via admin panel
+
+### �👥 Add Users
 Share `http://localhost:8080` with others on your network:
 - Same WiFi: Use your computer's local IP
 - Remote: Use VPN or port forwarding
