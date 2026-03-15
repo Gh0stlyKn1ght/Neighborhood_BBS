@@ -203,6 +203,33 @@ class Database:
             )
         ''')
         
+        # Privacy bulletins table (for privacy disclaimers - PHASE 4 Week 10)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS privacy_bulletins (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                version INTEGER DEFAULT 1,
+                is_active BOOLEAN DEFAULT 1,
+                created_by TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Privacy consent logs (track acknowledgment - PHASE 4 Week 10)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS privacy_consents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT UNIQUE NOT NULL,
+                bulletin_version INTEGER NOT NULL,
+                acknowledged BOOLEAN DEFAULT 1,
+                acknowledged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ip_address TEXT,
+                device_info TEXT
+            )
+        ''')
+        
         # Chat messages table (supports privacy modes)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS messages (
@@ -324,6 +351,10 @@ class Database:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_access_approvals_requested ON access_approvals(requested_at)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_access_tokens_expires ON access_tokens(expires_at)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_access_tokens_username ON access_tokens(username)')
+        # PHASE 4 - Privacy Transparency indexes
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_privacy_bulletins_active ON privacy_bulletins(is_active)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_privacy_consents_acknowledged ON privacy_consents(acknowledged_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_privacy_consents_session ON privacy_consents(session_id)')
         
         conn.commit()
         conn.close()
