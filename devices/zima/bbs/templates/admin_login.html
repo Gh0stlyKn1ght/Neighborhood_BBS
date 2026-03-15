@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Login - Neighborhood BBS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-form {
+        max-width: 400px;
+        margin: 50px auto;
+        padding: 30px;
+        border: 2px solid #00ff00;
+        background: rgba(0, 255, 0, 0.02);
+    }
+    
+    .login-form h1 {
+        margin-bottom: 20px;
+        font-size: 18px;
+    }
+    
+    .form-group {
+        margin: 15px 0;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 12px;
+    }
+    
+    .form-group input {
+        width: 100%;
+    }
+    
+    .form-actions {
+        margin-top: 20px;
+        text-align: center;
+    }
+    
+    .form-actions button {
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-form">
+    <h1>◆ SYSOP CONTROL PANEL</h1>
+    
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+    
+    <form method="POST">
+        <div class="form-group">
+            <label for="username">USERNAME</label>
+            <input type="text" id="username" name="username" value="sysop" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">PASSWORD</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit">LOGIN</button>
+        </div>
+    </form>
+    
+    <p style="text-align: center; font-size: 12px; margin-top: 20px; opacity: 0.7;">
+        <a href="/" style="color: #00ff00; text-decoration: none;">← BACK</a>
+    </p>
+</div>
+{% endblock %}

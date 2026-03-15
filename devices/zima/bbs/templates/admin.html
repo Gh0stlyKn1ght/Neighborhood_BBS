@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel - Neighborhood BBS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #00ff00;
+    }
+    
+    .admin-header h1 {
+        margin: 0;
+        font-size: 18px;
+    }
+    
+    .logout-btn {
+        background: #ff3300;
+        color: #fff;
+        border: 1px solid #ff3300;
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .logout-btn:hover {
+        background: #cc2200;
+    }
+    
+    .admin-section {
+        margin: 30px 0;
+        padding: 20px;
+        border: 1px solid #00ff00;
+        background: rgba(0, 255, 0, 0.02);
+    }
+    
+    .admin-section h2 {
+        margin-top: 0;
+    }
+    
+    .form-section {
+        background: rgba(0, 255, 0, 0.05);
+        padding: 15px;
+        margin: 15px 0;
+        border: 1px solid #00ff00;
+    }
+    
+    .form-section label {
+        display: block;
+        font-weight: bold;
+        margin-top: 10px;
+        margin-bottom: 5px;
+        font-size: 12px;
+    }
+    
+    .form-section input,
+    .form-section textarea {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .form-section button {
+        margin-right: 10px;
+    }
+    
+    .item-list {
+        margin-top: 15px;
+    }
+    
+    .item {
+        margin: 10px 0;
+        padding: 10px;
+        border-left: 2px solid #00ff00;
+        background: rgba(0, 255, 0, 0.01);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    
+    .item-content {
+        flex: 1;
+    }
+    
+    .item-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .item-meta {
+        font-size: 11px;
+        opacity: 0.7;
+    }
+    
+    .item-actions {
+        margin-left: 10px;
+    }
+    
+    .delete-btn {
+        background: #ff3300;
+        color: #fff;
+        border: 1px solid #ff3300;
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+    
+    .delete-btn:hover {
+        background: #cc2200;
+    }
+    
+    .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 15px 0;
+    }
+    
+    .stat-box {
+        padding: 10px;
+        border: 1px solid #00ff00;
+        background: rgba(0, 255, 0, 0.03);
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #00ff00;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+        opacity: 0.7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1>◆ SYSOP CONTROL PANEL</h1>
+    <form method="POST" action="/admin/logout" style="margin: 0;">
+        <button type="submit" class="logout-btn">LOGOUT</button>
+    </form>
+</div>
+
+<!-- Statistics -->
+<div class="stats">
+    <div class="stat-box">
+        <div class="stat-number">{{ bulletins|length }}</div>
+        <div class="stat-label">BULLETINS</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-number">{{ messages|length }}</div>
+        <div class="stat-label">MESSAGES</div>
+    </div>
+</div>
+
+<!-- Bulletins Section -->
+<div class="admin-section">
+    <h2>◆ BULLETINS</h2>
+    
+    <div class="form-section">
+        <h3 style="margin-top: 0;">New Bulletin</h3>
+        <form method="POST" action="/admin/bulletin/new">
+            <label>TITLE</label>
+            <input type="text" name="title" maxlength="100" required>
+            
+            <label>TEXT</label>
+            <textarea name="text" rows="4" maxlength="500" required></textarea>
+            
+            <button type="submit">CREATE BULLETIN</button>
+        </form>
+    </div>
+    
+    <div class="item-list">
+        {% for bulletin in bulletins %}
+        <div class="item">
+            <div class="item-content">
+                <div class="item-title">{{ bulletin.title }}</div>
+                <div style="margin: 8px 0; white-space: pre-wrap;">{{ bulletin.text }}</div>
+                <div class="item-meta">ID: {{ bulletin.id }} | Created: {{ bulletin.created_at }}</div>
+            </div>
+            <div class="item-actions">
+                <form method="POST" action="/admin/bulletin/{{ bulletin.id }}/delete" style="display: inline;">
+                    <button type="submit" class="delete-btn" onclick="return confirm('Delete bulletin?')">DELETE</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Messages Section -->
+<div class="admin-section">
+    <h2>◆ MESSAGE LOG</h2>
+    
+    <div style="margin-bottom: 15px;">
+        <form method="POST" action="/admin/messages/clear" style="display: inline;">
+            <button type="submit" class="delete-btn" onclick="return confirm('Clear all chat messages?')">CLEAR ALL MESSAGES</button>
+        </form>
+    </div>
+    
+    <div class="item-list">
+        {% for msg in messages %}
+        <div class="item">
+            <div class="item-content">
+                <div class="item-title">
+                    {{ msg.handle }}
+                    {% if msg.is_system %}<span style="opacity: 0.5;">[SYSTEM]</span>{% endif %}
+                </div>
+                <div style="margin: 8px 0; white-space: pre-wrap;">{{ msg.text }}</div>
+                <div class="item-meta">{{ msg.created_at }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Settings Section -->
+<div class="admin-section">
+    <h2>◆ SETTINGS</h2>
+    
+    <div class="form-section">
+        <h3 style="margin-top: 0;">Change Admin Password</h3>
+        <form method="POST" action="/admin/password/change">
+            <label>OLD PASSWORD</label>
+            <input type="password" name="old_password" required>
+            
+            <label>NEW PASSWORD</label>
+            <input type="password" name="new_password" required>
+            
+            <button type="submit">CHANGE PASSWORD</button>
+        </form>
+    </div>
+</div>
+
+<div style="text-align: center; margin-top: 20px;">
+    <a href="/" style="color: #00ff00; text-decoration: none;">← BACK TO BBS</a>
+</div>
+{% endblock %}

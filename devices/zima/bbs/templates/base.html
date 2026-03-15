@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Neighborhood BBS{% endblock %}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #00ff00;
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+        
+        /* CRT scanlines */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        /* CRT vignette */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.4) 100%);
+            pointer-events: none;
+            z-index: 998;
+        }
+        
+        main {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 24px;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        h2 {
+            margin: 15px 0 10px 0;
+            font-size: 16px;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 5px;
+        }
+        
+        .container {
+            border: 2px solid #00ff00;
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(0, 255, 0, 0.02);
+        }
+        
+        .bullet {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 2px solid #00ff00;
+            background: rgba(0, 255, 0, 0.03);
+        }
+        
+        button {
+            background: #00ff00;
+            color: #000;
+            border: 1px solid #00ff00;
+            padding: 8px 16px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #00cc00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        input, textarea {
+            background: #001a00;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 5px 0;
+            width: 100%;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
+        .error {
+            color: #ff0000;
+            border: 1px solid #ff0000;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

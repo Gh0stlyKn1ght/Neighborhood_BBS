@@ -1,0 +1,16 @@
+[Unit]
+Description=Neighborhood BBS - ZimaBoard
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/zima_bbs
+ExecStart=/usr/bin/python3 /opt/zima_bbs/app.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
