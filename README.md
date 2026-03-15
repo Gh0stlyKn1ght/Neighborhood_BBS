@@ -11,7 +11,13 @@
 
 **Neighborhood BBS** is a fully open-source, decentralized community board and real-time chatroom platform designed to run on affordable, low-power hardware like the **Raspberry Pi**, **Zima Board**, and **ESP8266**. Create a local neighborhood network where residents can share information, ask questions, organize events, and build community connections—all while keeping data local and secure.
 
-**🏘️ For neighborhoods. By the community. Forever open source.**
+**Perfect for:**
+- 🏘️ **Neighborhoods** - Local community communication
+- 🔐 **Security Teams** - Red teamers, pentesters, bug bounty hunters (see [Kali Linux Setup](KALI_SETUP.md))
+- 🔬 **Research Groups** - Secure intelligence sharing
+- 🤝 **Teams** - Any group needing offline-first communication
+
+**🏘️ For neighborhoods. By the community. By hackers. Forever open source.**
 
 ### ✨ Features
 
@@ -174,10 +180,35 @@ cd firmware/zima
 
 ## 📚 Documentation
 
+### Platform-Specific Setup Guides
+
+- **[Kali Linux Setup](KALI_SETUP.md)** 🛡️ - For security professionals, pentesters, and hackers
+  - Red team collaboration setup
+  - Integration with Nmap, Metasploit, SQLMap
+  - Secure networking for isolated teams
+  - Perfect for bug bounty hunters and security researchers
+
+- **[Debian/Ubuntu Setup](DEBIAN_SETUP.md)** 🐧 - For Debian, Ubuntu, and derivatives
+  - Native Python installation
+  - systemd service configuration
+  - Docker Compose deployment
+  - Nginx reverse proxy setup
+  - SSL/TLS with Let's Encrypt
+  - Performance optimization
+
+- **[Docker Setup](DOCKER_SETUP.md)** 🐳 - Cross-platform Docker deployment
+  - Windows (Docker Desktop)
+  - Linux/Raspberry Pi
+  - Security best practices
+  - Multi-instance deployment
+
+### General Documentation
+
 - [Setup Guide](docs/SETUP.md) - Detailed installation and configuration
 - [API Reference](docs/API.md) - Complete API documentation
 - [Developer Guide](docs/DEVELOPMENT.md) - Contributing and development workflow
 - [Hardware Guide](docs/HARDWARE.md) - Hardware-specific instructions
+- [Security Audit](SECURITY_AUDIT_FINAL.md) - Security implementation details
 
 ## 🤝 Contributing
 
