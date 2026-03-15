@@ -62,6 +62,17 @@ def main():
     from setup_config import SetupConfig
     SetupConfig.init_setup_table()
     
+    # Initialize privacy mode handler
+    logger.info("Initializing privacy mode handler...")
+    from privacy_handler import PrivacyModeHandler
+    privacy_handler = PrivacyModeHandler.create_handler_from_config()
+    logger.info(f"Privacy mode: {privacy_handler.privacy_mode}")
+    
+    # Initialize message cleanup scheduler
+    logger.info("Initializing message cleanup scheduler...")
+    from utils.message_scheduler import initialize_message_scheduler
+    initialize_message_scheduler()
+    
     # Create Flask app
     app = create_app()
     

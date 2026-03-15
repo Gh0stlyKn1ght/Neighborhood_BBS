@@ -6,6 +6,10 @@ from datetime import datetime
 from pathlib import Path
 import sqlite3
 import json
+import logging
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 # Database path
 DB_PATH = Path(__file__).parent.parent / 'data' / 'neighborhood.db'
@@ -50,14 +54,17 @@ class Database:
             )
         ''')
         
-        # Chat messages table
+        # Chat messages table (supports privacy modes)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                room_id INTEGER NOT NULL,
-                author TEXT NOT NULL,
-                content TEXT NOT NULL,
+                room_id INTEGER,
+                nickname TEXT NOT NULL,
+                author TEXT,
+                text TEXT NOT NULL,
+                content TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP,
                 FOREIGN KEY (room_id) REFERENCES chat_rooms(id)
             )
         ''')
@@ -156,10 +163,47 @@ class Database:
         
         conn.commit()
         conn.close()
+    
+    def ensure_privacy_columns(self):
+        """
+        Ensure messages table has privacy-mode columns
+        Adds expires_at and nickname columns if missing
+        """
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            
+            # Check if expires_at column exists
+            cursor.execute("PRAGMA table_info(messages)")
+            columns = [col[1] for col in cursor.fetchall()]
+            
+            if 'expires_at' not in columns:
+                logger.info("Adding expires_at column to messages table")
+                cursor.execute('''
+                    ALTER TABLE messages ADD COLUMN expires_at TIMESTAMP
+                ''')
+                conn.commit()
+            
+            if 'nickname' not in columns:
+                logger.info("Adding nickname column to messages table")
+                cursor.execute('''
+                    ALTER TABLE messages ADD COLUMN nickname TEXT
+                ''')
+                conn.commit()
+            
+            conn.close()
+        except Exception as e:
+            logger.warning(f"Error ensuring privacy columns: {e}")
 
 
 # Database instance
 db = Database()
+
+# Initialize privacy mode columns
+try:
+    db.ensure_privacy_columns()
+except Exception as e:
+    logger.warning(f"Failed to ensure privacy columns: {e}")
 
 
 class ChatRoom:
