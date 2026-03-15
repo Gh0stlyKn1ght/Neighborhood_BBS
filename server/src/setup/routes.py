@@ -1,5 +1,5 @@
 """
-Setup wizard routes - 5-step initial configuration
+Setup wizard routes - 6-step initial configuration
 """
 
 from flask import Blueprint, request, jsonify, render_template
@@ -26,11 +26,74 @@ def get_setup_status():
 
 @setup_bp.route('/wizard/1', methods=['GET'])
 def get_step_1():
-    """Get step 1 (admin password) info"""
-    data = SetupConfig.get_setup_step_1_data()
+    """Get step 1 (BBS mode selection) info"""
+    current_mode = SetupConfig.get_bbs_mode()
     
     return jsonify({
         'step': 1,
+        'title': 'Choose BBS Mode',
+        'description': 'Select how you want to run your BBS.',
+        'fields': [
+            {
+                'name': 'bbs_mode',
+                'type': 'radio',
+                'label': 'BBS Mode',
+                'options': [
+                    {
+                        'value': 'lite',
+                        'label': 'LITE MODE',
+                        'description': 'Simple anonymous chat, one room, no admin panel, no message history'
+                    },
+                    {
+                        'value': 'full',
+                        'label': 'FULL MODE',
+                        'description': 'Complete BBS with admin panel, privacy modes, themes, and settings'
+                    }
+                ],
+                'required': True,
+                'current': current_mode
+            }
+        ],
+        'tip': 'Lite: Quick setup, ephemeral chat. Full: Feature-rich community platform.',
+        'completed': current_mode != 'full'  # Has been explicitly set if not default
+    }), 200
+
+
+@setup_bp.route('/wizard/1', methods=['POST'])
+@limiter.limit("5/minute")
+def save_step_1():
+    """Save step 1 (BBS mode selection)"""
+    try:
+        data = request.get_json()
+        bbs_mode = data.get('bbs_mode', 'full').strip().lower()
+        
+        # Validate mode
+        if bbs_mode not in ['lite', 'full']:
+            return jsonify({'error': 'Invalid BBS mode selected'}), 400
+        
+        # Save mode
+        if not SetupConfig.save_bbs_mode(bbs_mode):
+            return jsonify({'error': 'Failed to save BBS mode'}), 500
+        
+        logger.info(f"BBS mode set to: {bbs_mode}")
+        
+        return jsonify({
+            'status': 'ok',
+            'next_step': 2
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error saving step 1: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@setup_bp.route('/wizard/2', methods=['GET'])
+def get_step_2():
+    """Get step 2 (admin password) info"""
+    data = SetupConfig.get_setup_step_1_data()
+    
+    return jsonify({
+        'step': 2,
         'title': 'Set Admin Password',
         'description': 'This is the ONLY password needed. Users do NOT need to login.',
         'fields': [
@@ -54,10 +117,10 @@ def get_step_1():
     }), 200
 
 
-@setup_bp.route('/wizard/1', methods=['POST'])
+@setup_bp.route('/wizard/2', methods=['POST'])
 @limiter.limit("5/minute")
-def save_step_1():
-    """Save step 1 (admin password)"""
+def save_step_2():
+    """Save step 2 (admin password)"""
     try:
         data = request.get_json()
         
@@ -89,12 +152,12 @@ def save_step_1():
         return jsonify({'error': str(e)}), 500
 
 
-@setup_bp.route('/wizard/2', methods=['GET'])
-def get_step_2():
-    """Get step 2 (privacy mode) info"""
+@setup_bp.route('/wizard/3', methods=['GET'])
+def get_step_3():
+    """Get step 3 (privacy mode) info"""
     
     return jsonify({
-        'step': 2,
+        'step': 3,
         'title': 'Privacy Settings',
         'description': 'How should we handle chat history?',
         'fields': [
@@ -131,9 +194,9 @@ def get_step_2():
     }), 200
 
 
-@setup_bp.route('/wizard/2', methods=['POST'])
-def save_step_2():
-    """Save step 2 (privacy mode)"""
+@setup_bp.route('/wizard/3', methods=['POST'])
+def save_step_3():
+    """Save step 3 (privacy mode)"""
     try:
         data = request.get_json()
         privacy_mode = data.get('privacy_mode', '').strip()
@@ -150,16 +213,16 @@ def save_step_2():
         }), 200
     
     except Exception as e:
-        logger.error(f"Error saving step 2: {e}")
+        logger.error(f"Error saving step 3: {e}")
         return jsonify({'error': str(e)}), 500
 
 
-@setup_bp.route('/wizard/3', methods=['GET'])
-def get_step_3():
-    """Get step 3 (user accounts) info"""
+@setup_bp.route('/wizard/4', methods=['GET'])
+def get_step_4():
+    """Get step 4 (user accounts) info"""
     
     return jsonify({
-        'step': 3,
+        'step': 4,
         'title': 'User Accounts',
         'description': 'Do users need accounts to chat?',
         'fields': [
@@ -191,9 +254,9 @@ def get_step_3():
     }), 200
 
 
-@setup_bp.route('/wizard/3', methods=['POST'])
-def save_step_3():
-    """Save step 3 (user accounts)"""
+@setup_bp.route('/wizard/4', methods=['POST'])
+def save_step_4():
+    """Save step 4 (user accounts)"""
     try:
         data = request.get_json()
         account_system = data.get('account_system', '').strip()
@@ -210,16 +273,16 @@ def save_step_3():
         }), 200
     
     except Exception as e:
-        logger.error(f"Error saving step 3: {e}")
+        logger.error(f"Error saving step 4: {e}")
         return jsonify({'error': str(e)}), 500
 
 
-@setup_bp.route('/wizard/4', methods=['GET'])
-def get_step_4():
-    """Get step 4 (moderation) info"""
+@setup_bp.route('/wizard/5', methods=['GET'])
+def get_step_5():
+    """Get step 5 (moderation) info"""
     
     return jsonify({
-        'step': 4,
+        'step': 5,
         'title': 'Moderation & Abuse Response',
         'description': 'If someone misbehaves, what can admins do?',
         'fields': [
@@ -257,9 +320,9 @@ def get_step_4():
     }), 200
 
 
-@setup_bp.route('/wizard/4', methods=['POST'])
-def save_step_4():
-    """Save step 4 (moderation)"""
+@setup_bp.route('/wizard/5', methods=['POST'])
+def save_step_5():
+    """Save step 5 (moderation)"""
     try:
         data = request.get_json()
         moderation_levels = data.get('moderation_levels', '').strip()
@@ -272,20 +335,20 @@ def save_step_4():
         
         return jsonify({
             'status': 'ok',
-            'next_step': 5
+            'next_step': 6
         }), 200
     
     except Exception as e:
-        logger.error(f"Error saving step 4: {e}")
+        logger.error(f"Error saving step 5: {e}")
         return jsonify({'error': str(e)}), 500
 
 
-@setup_bp.route('/wizard/5', methods=['GET'])
-def get_step_5():
-    """Get step 5 (access control) info"""
+@setup_bp.route('/wizard/6', methods=['GET'])
+def get_step_6():
+    """Get step 6 (access control) info"""
     
     return jsonify({
-        'step': 5,
+        'step': 6,
         'title': 'Access Control',
         'description': 'How should people join your community?',
         'fields': [
@@ -326,9 +389,9 @@ def get_step_5():
     }), 200
 
 
-@setup_bp.route('/wizard/5', methods=['POST'])
-def save_step_5():
-    """Save step 5 (access control)"""
+@setup_bp.route('/wizard/6', methods=['POST'])
+def save_step_6():
+    """Save step 6 (access control)"""
     try:
         data = request.get_json()
         access_control = data.get('access_control', '').strip()
@@ -355,7 +418,7 @@ def save_step_5():
         }), 200
     
     except Exception as e:
-        logger.error(f"Error saving step 5: {e}")
+        logger.error(f"Error saving step 6: {e}")
         return jsonify({'error': str(e)}), 500
 
 

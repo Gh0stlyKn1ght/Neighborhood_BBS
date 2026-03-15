@@ -365,3 +365,131 @@ class SessionManager:
                 'sessions_today': 0,
                 'avg_duration_minutes': 0
             }
+    
+    @staticmethod
+    def block_user(session_id, blocked_nickname, reason=None):
+        """
+        Block another user (prevent seeing their messages)
+        
+        Args:
+            session_id: Your session ID
+            blocked_nickname: Nickname to block
+            reason: Optional reason for blocking
+            
+        Returns:
+            bool: True if successful
+        """
+        try:
+            db = Database()
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT OR IGNORE INTO blocked_users 
+                (session_id, blocked_nickname, reason)
+                VALUES (?, ?, ?)
+            ''', (session_id, blocked_nickname, reason))
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Session {session_id[:8]} blocked {blocked_nickname}")
+            return True
+        
+        except Exception as e:
+            logger.error(f"Error blocking user: {e}")
+            return False
+    
+    @staticmethod
+    def unblock_user(session_id, blocked_nickname):
+        """
+        Unblock a previously blocked user
+        
+        Args:
+            session_id: Your session ID
+            blocked_nickname: Nickname to unblock
+            
+        Returns:
+            bool: True if successful
+        """
+        try:
+            db = Database()
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                DELETE FROM blocked_users
+                WHERE session_id = ? AND blocked_nickname = ?
+            ''', (session_id, blocked_nickname))
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Session {session_id[:8]} unblocked {blocked_nickname}")
+            return True
+        
+        except Exception as e:
+            logger.error(f"Error unblocking user: {e}")
+            return False
+    
+    @staticmethod
+    def get_blocked_users(session_id):
+        """
+        Get list of blocked user nicknames for a session
+        
+        Args:
+            session_id: Your session ID
+            
+        Returns:
+            list: Blocked nicknames
+        """
+        try:
+            db = Database()
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT blocked_nickname FROM blocked_users
+                WHERE session_id = ?
+                ORDER BY blocked_at DESC
+            ''', (session_id,))
+            
+            results = cursor.fetchall()
+            conn.close()
+            
+            return [row[0] for row in results]
+        
+        except Exception as e:
+            logger.error(f"Error getting blocked users: {e}")
+            return []
+    
+    @staticmethod
+    def is_blocked(session_id, other_nickname):
+        """
+        Check if a nickname is blocked for this session
+        
+        Args:
+            session_id: Your session ID
+            other_nickname: Nickname to check
+            
+        Returns:
+            bool: True if blocked
+        """
+        try:
+            db = Database()
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT COUNT(*) FROM blocked_users
+                WHERE session_id = ? AND blocked_nickname = ?
+            ''', (session_id, other_nickname))
+            
+            count = cursor.fetchone()[0]
+            conn.close()
+            
+            return count > 0
+        
+        except Exception as e:
+            logger.error(f"Error checking if blocked: {e}")
+            return False

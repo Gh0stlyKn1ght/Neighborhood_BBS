@@ -7,6 +7,7 @@ from flask_socketio import emit, join_room, leave_room, rooms as socketio_rooms
 from server import socketio, limiter
 from session_manager import SessionManager
 from privacy_handler import PrivacyModeHandler
+from mode_helper import ModeHelper
 from models import ChatRoom, Database
 from datetime import datetime
 import logging
@@ -16,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 chat_bp = Blueprint('chat', __name__, url_prefix='/api/chat')
 
-# Initialize privacy handler
-privacy_handler = PrivacyModeHandler.create_handler_from_config()
+# Initialize privacy handler based on mode
+privacy_handler = PrivacyModeHandler(ModeHelper.get_privacy_mode())
 
 
 @chat_bp.route('/rooms', methods=['GET'])

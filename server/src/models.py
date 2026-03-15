@@ -68,6 +68,19 @@ class Database:
             )
         ''')
         
+        # Blocked users table (for user blocking feature)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS blocked_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                blocked_nickname TEXT NOT NULL,
+                blocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reason TEXT,
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+                UNIQUE(session_id, blocked_nickname)
+            )
+        ''')
+        
         # Chat messages table (supports privacy modes)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS messages (

@@ -5,12 +5,29 @@ Handles joining, changing nickname, session info
 
 from flask import Blueprint, jsonify, request, session
 from session_manager import SessionManager
+from mode_helper import ModeHelper
 from admin_config import AdminConfig
+from server import limiter
 import logging
 
 logger = logging.getLogger(__name__)
 
 user_bp = Blueprint('user', __name__, url_prefix='/api/user')
+
+
+@user_bp.route('/features', methods=['GET'])
+@limiter.limit("60/minute")
+def get_feature_flags():
+    """
+    Get enabled features for this BBS instance
+    Returns mode-specific feature flags
+    """
+    try:
+        flags = ModeHelper.get_feature_flags()
+        return jsonify(flags), 200
+    except Exception as e:
+        logger.error(f"Error getting features: {e}")
+        return jsonify({'error': 'Failed to get features'}), 500
 
 
 @user_bp.route('/join', methods=['POST'])
@@ -243,3 +260,121 @@ def validate_session():
     except Exception as e:
         logger.error(f"Error validating session: {e}")
         return jsonify({'valid': False}), 200
+
+
+@user_bp.route('/block', methods=['POST'])
+def block_user():
+    """
+    Block a user (prevent seeing their messages)
+    
+    Body: {session_id, blocked_nickname, reason}
+    Returns: {status: ok, blocked_users: [...]}
+    """
+    try:
+        session_id = request.args.get('session_id') or request.get_json().get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No active session'}), 401
+        
+        data = request.get_json()
+        blocked_nickname = data.get('blocked_nickname', '').strip()
+        reason = data.get('reason', '').strip() or None
+        
+        # Validate
+        if not blocked_nickname:
+            return jsonify({'error': 'Blocked nickname is required'}), 400
+        
+        # Get current session to verify it exists
+        session_data = SessionManager.get_session(session_id)
+        if not session_data:
+            return jsonify({'error': 'Session expired or invalid'}), 401
+        
+        # Block the user
+        if not SessionManager.block_user(session_id, blocked_nickname, reason):
+            return jsonify({'error': 'Failed to block user'}), 500
+        
+        # Return updated block list
+        blocked_list = SessionManager.get_blocked_users(session_id)
+        
+        return jsonify({
+            'status': 'ok',
+            'blocked_users': blocked_list,
+            'message': f'{blocked_nickname} has been blocked'
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error blocking user: {e}")
+        return jsonify({'error': 'Failed to block user'}), 500
+
+
+@user_bp.route('/unblock', methods=['POST'])
+def unblock_user():
+    """
+    Unblock a previously blocked user
+    
+    Body: {session_id, blocked_nickname}
+    Returns: {status: ok, blocked_users: [...]}
+    """
+    try:
+        session_id = request.args.get('session_id') or request.get_json().get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No active session'}), 401
+        
+        data = request.get_json()
+        blocked_nickname = data.get('blocked_nickname', '').strip()
+        
+        # Validate
+        if not blocked_nickname:
+            return jsonify({'error': 'Blocked nickname is required'}), 400
+        
+        # Get current session to verify it exists
+        session_data = SessionManager.get_session(session_id)
+        if not session_data:
+            return jsonify({'error': 'Session expired or invalid'}), 401
+        
+        # Unblock the user
+        if not SessionManager.unblock_user(session_id, blocked_nickname):
+            return jsonify({'error': 'Failed to unblock user'}), 500
+        
+        # Return updated block list
+        blocked_list = SessionManager.get_blocked_users(session_id)
+        
+        return jsonify({
+            'status': 'ok',
+            'blocked_users': blocked_list,
+            'message': f'{blocked_nickname} has been unblocked'
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error unblocking user: {e}")
+        return jsonify({'error': 'Failed to unblock user'}), 500
+
+
+@user_bp.route('/blocked-list', methods=['GET'])
+def get_blocked_list():
+    """
+    Get list of blocked users for this session
+    
+    Query: session_id
+    Returns: {blocked_users: [...]}
+    """
+    try:
+        session_id = request.args.get('session_id')
+        if not session_id:
+            return jsonify({'error': 'Session ID required'}), 400
+        
+        # Get current session to verify it exists
+        session_data = SessionManager.get_session(session_id)
+        if not session_data:
+            return jsonify({'error': 'Session expired or invalid'}), 401
+        
+        # Get blocked list
+        blocked_list = SessionManager.get_blocked_users(session_id)
+        
+        return jsonify({
+            'blocked_users': blocked_list,
+            'count': len(blocked_list)
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting blocked list: {e}")
+        return jsonify({'error': 'Failed to get blocked list'}), 500

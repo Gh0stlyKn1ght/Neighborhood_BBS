@@ -305,3 +305,48 @@ class SetupConfig:
         except Exception as e:
             logger.error(f"Error verifying admin password: {e}")
             return False
+    
+    @staticmethod
+    def get_bbs_mode():
+        """Get BBS mode (lite or full)"""
+        try:
+            db = Database()
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                'SELECT value FROM setup_config WHERE key = ?',
+                ('bbs_mode',)
+            )
+            result = cursor.fetchone()
+            conn.close()
+            
+            return result[0] if result else 'full'  # Default to full
+        except Exception as e:
+            logger.warning(f"Error getting BBS mode, defaulting to full: {e}")
+            return 'full'
+    
+    @staticmethod
+    def save_bbs_mode(mode):
+        """Save BBS mode (lite or full)"""
+        try:
+            if mode not in ['lite', 'full']:
+                raise ValueError(f"Invalid BBS mode: {mode}")
+            
+            SetupConfig.init_setup_table()
+            db = Database()
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                'INSERT OR REPLACE INTO setup_config (key, value) VALUES (?, ?)',
+                ('bbs_mode', mode)
+            )
+            
+            conn.commit()
+            conn.close()
+            
+            return True
+        except Exception as e:
+            logger.error(f"Error saving BBS mode: {e}")
+            return False
