@@ -78,11 +78,18 @@ Check [ROADMAP.md](ROADMAP.md) for planned features and improvements.
 
 ### Technologies Used
 
+**Core Stack:**
 - Python & Flask
 - SQLite
 - JavaScript
 - MicroPython
 - Linux
+
+**Development Assisted By:**
+- **Claude (Anthropic)** - AI-powered architecture, code generation, security auditing, and documentation
+- **GitHub Copilot** - Code completion and implementation assistance
+
+These AI tools accelerated development while maintaining code quality, security, and best practices.
 
 ## Getting Involved
 

@@ -186,9 +186,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🎪 Acknowledgments
 
+- **Claude (Anthropic)** - AI-powered architecture design, code generation, comprehensive documentation, security auditing, and code quality analysis
+- **GitHub Copilot** - Code completion and implementation assistance
 - Inspired by classic BBS systems and modern community platforms
 - Built with ❤️ for neighborhoods everywhere
-- Thanks to the open-source community
+- Thanks to the open-source community for amazing tools and libraries
 
 ## 📞 Support & Contact
 

@@ -12,6 +12,15 @@ We welcome contributions from everyone! Please see [CONTRIBUTING.md](CONTRIBUTIN
   - GitHub: [@Gh0stlyKn1ght](https://github.com/Gh0stlyKn1ght)
   - Initial project architecture and implementation
 
+### AI-Assisted Development
+
+This project was created and refined with assistance from AI tools:
+
+- **Claude (Anthropic)** - Architecture design, code generation, documentation, security auditing, testing framework, and code quality improvements
+- **GitHub Copilot** - Code completion, implementation assistance, and suggestions
+
+These AI tools helped accelerate development while maintaining code quality and best practices.
+
 ### Community Contributors
 
 Thank you to everyone who has contributed to Neighborhood BBS!
@@ -34,13 +43,32 @@ To add yourself to this list, please:
 
 ### Acknowledgments
 
-We're grateful for:
+#### AI & Development Tools
+- **Claude (Anthropic)** - AI architecture, code generation, security auditing, documentation, and quality analysis
+- **GitHub Copilot** - Code completion and implementation assistance
 
-- **Flask & SocketIO** - Web framework
+#### Core Technologies
+- **Flask & Flask-SocketIO** - Web framework and real-time communication
 - **SQLite** - Database engine
+- **Python** - Programming language
+- **MicroPython** - Embedded Python runtime
+
+#### Hardware & Platforms
 - **Raspberry Pi Foundation** - Single-board computers
-- **MicroPython** - Embedded Python
-- **Open Source Community** - Tools and inspiration
+- **Zima Board** - Modular computing platform
+- **Espressif Systems** - ESP8266/ESP32 microcontrollers
+
+#### Development & Testing
+- **Pytest** - Testing framework
+- **Black** - Code formatter
+- **Flake8** - Linting
+- **MyPy** - Type checking
+- **GitHub Actions** - CI/CD pipeline
+
+#### Community & Inspiration
+- **Open Source Community** - Tools, libraries, and inspiration
+- **Classic BBS Systems** - Historical inspiration
+- **Modern Community Platforms** - Design principles
 
 ### Community Support
 
