@@ -8,6 +8,7 @@ from server import socketio, limiter
 from session_manager import SessionManager
 from privacy_handler import PrivacyModeHandler
 from mode_helper import ModeHelper
+from moderation_service import ModerationService
 from models import ChatRoom, Database
 from datetime import datetime
 import logging
@@ -190,7 +191,7 @@ def on_join_room(data):
 
 @socketio.on('message')
 def on_message(data):
-    """WebSocket: Send a message to room"""
+    """WebSocket: Send a message to room with moderation checks"""
     try:
         session_id = data.get('session_id')
         room_id = data.get('room_id', 1)
@@ -212,6 +213,55 @@ def on_message(data):
         nickname = session['nickname']
         room_name = f"room_{room_id}"
         
+        # PHASE 2: Check if user is suspended
+        if ModerationService.is_user_suspended(nickname):
+            emit('error', {'message': 'Your account is suspended and cannot send messages'})
+            logger.warning(f"Suspended user {nickname} attempted to send message")
+            return
+        
+        # PHASE 2: Check message content for moderation violations
+        moderation_check = ModerationService.check_message_content(text)
+        
+        if moderation_check['violated']:
+            # Report violation
+            violation_details = f"Triggered {len(moderation_check['rules_triggered'])} rule(s): {', '.join([r['rule_name'] for r in moderation_check['rules_triggered']])}"
+            ModerationService.report_violation(
+                nickname=nickname,
+                violation_type=ModerationService.VIOLATION_CUSTOM,
+                description=violation_details,
+                reported_by='system',
+                evidence=text
+            )
+            
+            # Determine action based on severity
+            max_severity = moderation_check['severity']
+            
+            if max_severity == ModerationService.SEVERITY_CRITICAL:
+                # Suspend user immediately
+                ModerationService.suspend_user(nickname, 'temporary', f'Auto-suspended for {max_severity} violation', 'system', 24)
+                emit('error', {'message': 'Your message violates community standards. Your account has been suspended.'})
+                logger.critical(f"AUTO-SUSPEND: {nickname} for critical violation")
+                return
+            
+            elif max_severity == ModerationService.SEVERITY_HIGH:
+                # Warn user strongly, don't send message
+                emit('warning', {
+                    'message': 'Your message violates community standards and was not sent.',
+                    'severity': 'high',
+                    'rules_violated': len(moderation_check['rules_triggered'])
+                })
+                logger.warning(f"Message blocked for {nickname}: high severity violation")
+                return
+            
+            elif max_severity in [ModerationService.SEVERITY_MEDIUM, ModerationService.SEVERITY_LOW]:
+                # Warn but allow message with flag
+                emit('warning', {
+                    'message': 'Your message contains content flagged for review',
+                    'severity': max_severity,
+                    'rules_violated': len(moderation_check['rules_triggered'])
+                })
+                logger.info(f"Message from {nickname} flagged for {max_severity} violation")
+        
         # Save message using privacy handler
         message = privacy_handler.save_message(
             session_id=session_id,
@@ -228,7 +278,8 @@ def on_message(data):
             'nickname': nickname,
             'text': text,
             'timestamp': datetime.now().isoformat(),
-            'room_id': room_id
+            'room_id': room_id,
+            'moderation_flagged': moderation_check['violated']
         }
         
         emit('message', chat_message, room=room_name)

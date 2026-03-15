@@ -66,6 +66,7 @@ def create_app(config_file=None):
     from setup.routes import setup_bp
     from privacy.routes import privacy_bp
     from user.routes import user_bp
+    from moderation.routes import moderation_bp
 
     app.register_blueprint(chat_bp)
     app.register_blueprint(board_bp)
@@ -73,6 +74,7 @@ def create_app(config_file=None):
     app.register_blueprint(setup_bp)
     app.register_blueprint(privacy_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(moderation_bp)
     
     # Setup check middleware
     @app.before_request

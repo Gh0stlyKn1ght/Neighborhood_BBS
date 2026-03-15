@@ -81,6 +81,68 @@ class Database:
             )
         ''')
         
+        # User violations table (for moderation - PHASE 2)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS violations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nickname TEXT NOT NULL,
+                violation_type TEXT NOT NULL,
+                severity TEXT DEFAULT 'low',
+                description TEXT,
+                evidence TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reported_by TEXT,
+                resolved BOOLEAN DEFAULT 0,
+                resolved_at TIMESTAMP,
+                UNIQUE(nickname, violation_type, created_at)
+            )
+        ''')
+        
+        # Moderation rules table (for content filtering - PHASE 2)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS moderation_rules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                rule_name TEXT UNIQUE NOT NULL,
+                rule_type TEXT NOT NULL,
+                pattern TEXT,
+                action TEXT DEFAULT 'warn',
+                severity TEXT DEFAULT 'medium',
+                enabled BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # User suspensions table (for temporary/permanent bans - PHASE 2)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_suspensions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nickname TEXT NOT NULL,
+                suspension_type TEXT DEFAULT 'temporary',
+                reason TEXT NOT NULL,
+                suspended_by TEXT NOT NULL,
+                suspended_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP,
+                is_active BOOLEAN DEFAULT 1,
+                UNIQUE(nickname, suspended_at)
+            )
+        ''')
+        
+        # Moderation logs table (audit trail - PHASE 2)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS moderation_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                action_type TEXT NOT NULL,
+                target_nickname TEXT,
+                action_reason TEXT,
+                action_details TEXT,
+                taken_by TEXT NOT NULL,
+                taken_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                result TEXT DEFAULT 'success'
+            )
+        ''')
+        
         # Chat messages table (supports privacy modes)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS messages (
@@ -187,6 +249,13 @@ class Database:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_banned_devices_active ON banned_devices(is_active)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_themes_active ON themes(is_active)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_violations_nickname ON violations(nickname)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_violations_severity ON violations(severity)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_violations_created ON violations(created_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_suspensions_nickname ON user_suspensions(nickname)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_suspensions_active ON user_suspensions(is_active)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_moderation_logs_taken_at ON moderation_logs(taken_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_moderation_rules_enabled ON moderation_rules(enabled)')
         
         conn.commit()
         conn.close()
