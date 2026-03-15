@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y \
     sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user for security
+RUN useradd -m -u 1000 bbsuser && mkdir -p /app/data /app/logs && chown -R bbsuser:bbsuser /app
+
 # Copy requirements
 COPY requirements.txt .
 
@@ -20,17 +23,24 @@ COPY web/ ./web/
 COPY config/ ./config/
 COPY scripts/ ./scripts/
 
-# Create data directory
-RUN mkdir -p data logs
+# Set proper permissions
+RUN chown -R bbsuser:bbsuser /app
+
+# Switch to non-root user
+USER bbsuser
 
 # Expose port
 EXPOSE 8080
 
 # Set environment variables
-ENV FLASK_APP=src/server.py
+ENV FLASK_APP=src/main.py
 ENV PYTHONUNBUFFERED=1
 ENV HOST=0.0.0.0
 ENV PORT=8080
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/').read()" || exit 1
+
 # Run initialization and start server
-CMD python scripts/init_db.py && python src/main.py
+CMD python scripts/init-db-local.py && python src/main.py
