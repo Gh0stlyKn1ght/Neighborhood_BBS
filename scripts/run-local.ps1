@@ -3,7 +3,7 @@
 
 param(
     [int]$Port = 8080,
-    [string]$Host = "127.0.0.1",
+    [string]$BindHost = "127.0.0.1",
     [switch]$Network = $false,  # Allow external connections
     [switch]$NoDebug = $false   # Disable debug mode
 )
@@ -50,7 +50,7 @@ if (-not (Test-Path "data/neighborhood_bbs.db")) {
 
 # Set network binding if requested
 if ($Network) {
-    $Host = "0.0.0.0"
+    $BindHost = "0.0.0.0"
     Write-Host "🌐 Network binding enabled (accept external connections)" -ForegroundColor $warning
     Write-Host "   Find your IP: ipconfig" -ForegroundColor Gray
     Write-Host ""
@@ -69,33 +69,37 @@ if ($NoDebug) {
 
 Write-Host ""
 Write-Host "🚀 Starting Neighborhood BBS..." -ForegroundColor $success
-Write-Host "   Host: $Host" -ForegroundColor Gray
+Write-Host "   Host: $BindHost" -ForegroundColor Gray
 Write-Host "   Port: $Port" -ForegroundColor Gray
 Write-Host ""
 Write-Host "================================================" -ForegroundColor $info
 Write-Host "✓ Server running!" -ForegroundColor $success
 Write-Host ""
 Write-Host "📖 Access here:" -ForegroundColor $info
-if ($Host -eq "0.0.0.0") {
+if ($BindHost -eq "0.0.0.0") {
     $ipaddr = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "127.*" }).IPAddress | Select-Object -First 1
     Write-Host "   Local:    http://127.0.0.1:$Port" -ForegroundColor $success
     Write-Host "   Network:  http://$($ipaddr):$Port" -ForegroundColor $success
 } else {
-    Write-Host "   http://$Host`:$Port" -ForegroundColor $success
+    Write-Host "   http://$BindHost`:$Port" -ForegroundColor $success
 }
 Write-Host ""
 Write-Host "🔐 Admin panel:" -ForegroundColor $info
-Write-Host "   http://$Host`:$Port/admin/login" -ForegroundColor $success
+Write-Host "   http://$BindHost`:$Port/admin/login" -ForegroundColor $success
 Write-Host ""
 Write-Host "📊 API docs:" -ForegroundColor $info
-Write-Host "   http://$Host`:$Port/api/docs" -ForegroundColor $success
+Write-Host "   http://$BindHost`:$Port/api/docs" -ForegroundColor $success
 Write-Host ""
 Write-Host "⏹️  Press CTRL+C to stop the server" -ForegroundColor $warning
 Write-Host "================================================" -ForegroundColor $info
 Write-Host ""
 
 # Run the Flask development server
-python "src/main.py" --host $Host --port $Port
+$args = @("src/main.py", "--host", $BindHost, "--port", $Port)
+if ($NoDebug) {
+    $args += "--no-debug"
+}
+python @args
 
 # Cleanup
 Write-Host ""
