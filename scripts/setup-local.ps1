@@ -27,7 +27,7 @@ if ($pythonPath) {
     exit 1
 }
 
-$projectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 Write-Host "  Working directory: $projectRoot" -ForegroundColor Gray
 
