@@ -1,26 +1,55 @@
 
 
+<!-- Badges -->
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.7+](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![GitHub Issues](https://img.shields.io/github/issues/Gh0stlyKn1ght/Neighborhood_BBS)](https://github.com/Gh0stlyKn1ght/Neighborhood_BBS/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/Gh0stlyKn1ght/Neighborhood_BBS?style=social)](https://github.com/Gh0stlyKn1ght/Neighborhood_BBS)
+[![Open Source](https://img.shields.io/badge/Open%20Source-❤-brightgreen)](OPEN_SOURCE.md)
+
 ## 📋 Overview
 
-**Neighborhood BBS** is a decentralized community board and real-time chatroom platform designed to run on low-power devices like the **Zima Board** and **ESP8266**. Create a local neighborhood network where residents can share information, ask questions, organize events, and build community connections.
+**Neighborhood BBS** is a fully open-source, decentralized community board and real-time chatroom platform designed to run on affordable, low-power hardware like the **Raspberry Pi**, **Zima Board**, and **ESP8266**. Create a local neighborhood network where residents can share information, ask questions, organize events, and build community connections—all while keeping data local and secure.
+
+**🏘️ For neighborhoods. By the community. Forever open source.**
 
 ### ✨ Features
 
 - 💬 **Real-time Chat** - Instant messaging for neighborhood discussions
 - 📌 **Community Board** - Post notices, announcements, and requests
 - 🏘️ **Local Network** - Works on local networks and mesh networks
-- ⚡ **Low Power** - Runs efficiently on ESP8266 and Zima Board
+- ⚡ **Low Power** - Runs efficiently on Raspberry Pi, ESP8266, and Zima Board
 - 🔒 **Privacy First** - Keep neighborhood data local and secure
 - 📱 **Web Interface** - Clean, responsive design for all devices
 - 🌐 **WiFi Connected** - Easy setup and connectivity
+- 📜 **100% Open Source** - MIT License, fully transparent
 
 ## 🎯 Supported Hardware
 
-| Device | Status | Notes |
-|--------|--------|-------|
-| **Zima Board** | ✅ Primary | Full support with Linux OS |
-| **ESP8266** | ✅ Supported | MicroPython firmware |
-| **ESP32** | 🔄 Planned | Extended capabilities |
+| Device | Status | Cost | Power | Setup |
+|--------|--------|------|-------|-------|
+| **Raspberry Pi 4/5** | ✅ Full Support (NEW!) | $$ | 5W | 30 min |
+| **Zima Board** | ✅ Fully Supported | $$$$ | 12W | 30 min |
+| **ESP8266** | ✅ Supported | $ | <100mA | 1-2 hrs |
+| **ESP32** | 🔄 In Progress | $$ | 50-100mA | 1-2 hrs |
+
+### Quick Start by Device
+
+**Raspberry Pi (Easiest! 🎯)**
+```bash
+curl https://raw.githubusercontent.com/Gh0stlyKn1ght/Neighborhood_BBS/main/firmware/raspberry-pi/setup.sh | bash
+```
+
+**Docker (Any Platform)**
+```bash
+docker-compose -f docker/docker-compose.yml up -d
+```
+
+**Linux Server (Zima, Ubuntu, Debian)**
+See [docs/SETUP.md](docs/SETUP.md)
+
+**Embedded (ESP8266)**
+See [firmware/esp8266/README.md](firmware/esp8266/README.md)
 
 ## 🚀 Quick Start
 

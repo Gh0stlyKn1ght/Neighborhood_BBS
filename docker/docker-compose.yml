@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  neighborhood-bbs:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.arm64  # Change to Dockerfile.armv7 for Pi 3/4
+    container_name: neighborhood-bbs
+    ports:
+      - "8080:8080"
+    volumes:
+      - nbbs-data:/app/data
+      - nbbs-logs:/app/logs
+    environment:
+      - DEBUG=false
+      - SECRET_KEY=change-this-in-production
+      - HOST=0.0.0.0
+      - PORT=8080
+    restart: unless-stopped
+    networks:
+      - nbbs-network
+
+  # Optional: PostgreSQL for production
+  # postgres:
+  #   image: postgres:15
+  #   container_name: neighborhood-bbs-db
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   environment:
+  #     - POSTGRES_DB=neighborhood_bbs
+  #     - POSTGRES_USER=nbbs_user
+  #     - POSTGRES_PASSWORD=secure_password
+  #   restart: unless-stopped
+  #   networks:
+  #     - nbbs-network
+
+volumes:
+  nbbs-data:
+  nbbs-logs:
+  # postgres-data:
+
+networks:
+  nbbs-network:
+    driver: bridge

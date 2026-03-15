@@ -18,7 +18,34 @@
 
 **Deployment:** See [firmware/zima/README.md](firmware/zima/README.md)
 
-#### 2. ESP8266
+#### 2. Raspberry Pi
+**Status:** ✅ Full Support (NEW!)
+
+- **Specs:** ARM Multi-core, 2-8GB RAM, microSD card
+- **Models:** Pi 3B+, Pi 4, Pi 5
+- **OS:** Raspberry Pi OS (Linux-based)
+- **Ideal For:** Community server, neighborhood hub
+- **Advantages:**
+  - Affordable ($35-80)
+  - Wide community support
+  - Easy to set up
+  - Great for learning
+  - Low power consumption (~5W)
+
+**Deployment:** See [firmware/raspberry-pi/README.md](firmware/raspberry-pi/README.md)
+
+**Quick Start:**
+```bash
+curl https://raw.githubusercontent.com/Gh0stlyKn1ght/Neighborhood_BBS/main/firmware/raspberry-pi/setup.sh | bash
+```
+
+Or with Docker:
+```bash
+cd docker
+docker-compose -f docker-compose.yml up -d
+```
+
+#### 3. ESP8266
 **Status:** ✅ Supported
 
 - **Specs:** 80/160MHz CPU, 160KB RAM, 4MB Flash
@@ -41,23 +68,35 @@
 - More storage
 - Better for local server node
 
-#### Raspberry Pi
+#### Orange Pi
 **Status:** 📋 Planned
 
-- Alternative to Zima for Linux-based server
-- Lower cost option
-- Wide community support
+- Alternative to Raspberry Pi
+- Lower cost
+- Good performance
+
+#### Generic x86
+**Status:** 📋 Planned
+
+- Desktop/laptop deployment
+- VPS hosting
+- Docker containers
 
 ## Hardware Specifications Comparison
 
-| Feature | Zima Board | ESP8266 | ESP32 |
-|---------|-----------|--------|-------|
-| Processor | ARMv8 Multi-core | Xtensa 80/160MHz | Xtensa Dual-core |
-| RAM | 4GB+ | 160KB RAM | 520KB RAM |
-| Storage | 128GB+ | 4MB | 16MB+ |
-| WiFi | Yes | Yes | Yes |
-| Ethernet | Yes | No | No |
-| Power | 12W typical | <100mA | 50-100mA |
+| Feature | Raspberry Pi 4 | Zima Board | ESP8266 | ESP32 |
+|---------|---|-----------|--------|-------|
+| Processor | ARM Quad-core 1.5GHz | ARMv8 Multi-core | Xtensa 80/160MHz | Xtensa Dual-core |
+| RAM | 2-8GB | 4GB+ | 160KB | 520KB |
+| Storage | microSD (32GB+) | 128GB+ | 4MB | 16MB+ |
+| WiFi | Yes | Yes | Yes | Yes |
+| Ethernet | Yes (USB) | Yes | No | No |
+| Power | ~5W | ~12W | <100mA | 50-100mA |
+| OS | Linux | Linux | MicroPython | MicroPython |
+| Cost | $$$ | $$$$ | $ | $$ |
+| Setup Time | 30 min | 30 min | 1-2 hours | 1-2 hours |
+| Community | Very Large | Small | Large | Large |
+| Deployment | Server/Hub | Server | Client/Sensor | Gateway |
 | OS | Linux | MicroPython | MicroPython |
 | Cost | $$$$ | $ | $$ |
 | Deployment | Server | Client/Sensor | Node/Gateway |

@@ -1,0 +1,27 @@
+FROM arm32v7/python:3.11-slim
+
+# For Raspberry Pi 3/4 (32-bit)
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src/ ./src/
+COPY web/ ./web/
+COPY config/ ./config/
+COPY scripts/ ./scripts/
+
+RUN mkdir -p data logs
+
+EXPOSE 8080
+
+ENV FLASK_APP=src/server.py
+ENV PYTHONUNBUFFERED=1
+ENV HOST=0.0.0.0
+ENV PORT=8080
+
+CMD python scripts/init_db.py && python src/main.py
