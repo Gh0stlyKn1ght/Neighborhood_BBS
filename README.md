@@ -1,6 +1,10 @@
 # Neighborhood BBS
 
-![Neighborhood BBS Logo](logo.png)
+<div align="center">
+
+![Neighborhood BBS Logo](https://raw.githubusercontent.com/Gh0stlyKn1ght/Neighborhood_BBS/main/logo.png)
+
+</div>
 
 <!-- Badges -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
