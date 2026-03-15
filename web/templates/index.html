@@ -37,6 +37,14 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:r
 .banner-info{font-size:10px;color:var(--dim);margin-top:8px;letter-spacing:1px}
 .banner-info span{color:var(--g);text-shadow:0 0 5px rgba(0,255,65,0.5)}
 
+/* LOGO STYLING */
+.banner-logo{margin-bottom:15px;text-align:center}
+.banner-logo img{max-height:80px;max-width:200px;filter:drop-shadow(0 0 10px rgba(0,255,65,0.5)) brightness(1.1);transition:all 0.3s;animation:logo-glow 2s ease-in-out infinite}
+
+@keyframes logo-glow{0%,100%{filter:drop-shadow(0 0 10px rgba(0,255,65,0.5)) brightness(1.1)}50%{filter:drop-shadow(0 0 20px rgba(0,255,65,0.8)) brightness(1.2)}}
+
+.banner-logo img:hover{transform:scale(1.05);filter:drop-shadow(0 0 25px rgba(0,255,65,0.9))}
+
 /* MENU SECTION */
 .menu-section{margin-bottom:15px;padding:10px;border:1px solid var(--dim);background:rgba(0,255,65,0.02)}
 .menu-title{color:var(--g);font-weight:bold;text-shadow:0 0 5px rgba(0,255,65,0.5);margin-bottom:8px;letter-spacing:2px}
@@ -139,6 +147,9 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:r
   <!-- LANDING PAGE / BULLETIN BOARD -->
   <div id="landing-area" class="screen">
     <div class="banner">
+      <div class="banner-logo">
+        <img src="/static/images/logo.png" alt="Neighborhood BBS Logo" />
+      </div>
       <div class="banner-ascii">
 █████╗ ███████╗██╗ █████╗ ███████╗╗ █████╗ ███═██╗███████╗███████╗██╗
 ██╔═══╝██╔════╝██║██╔══██╗██╔════╝██╔══██║██║ ██║██╔═════╝██╚════╗██║
@@ -184,7 +195,10 @@ body::after{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:r
   <div id="chat-area" class="screen">
     <div class="chat-container">
       <div class="chat-header">
-        <div class="chat-header-title">>> NEIGHBORHOOD BBS CHAT <<</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <img src="/static/images/logo.png" alt="Logo" style="height:30px;width:auto;filter:drop-shadow(0 0 5px rgba(0,255,65,0.5))" />
+          <div class="chat-header-title">>> NEIGHBORHOOD BBS CHAT <<</div>
+        </div>
         <div class="chat-topic">[ TOPIC: Local Community ] Residents Online: <span id="user-count" style="color: var(--g);">1</span></div>
       </div>
 

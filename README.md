@@ -1,13 +1,17 @@
 # Neighborhood BBS
 
+![Neighborhood BBS Logo](logo.png)
+
 <!-- Badges -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.7+](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](/github/workflows/tests.yml)
+[![Tests Passing](https://img.shields.io/badge/Tests-25%2F25-brightgreen.svg)](tests/)
+[![Code Quality](https://img.shields.io/badge/Code%20Quality-High-brightgreen.svg)](GITHUB_STANDARDS_AUDIT.md)
+[![Security Hardened](https://img.shields.io/badge/Security-Hardened-brightgreen.svg)](SECURITY.md)
+[![Open Source](https://img.shields.io/badge/Open%20Source-❤-brightgreen)](OPEN_SOURCE.md)
 [![GitHub Issues](https://img.shields.io/github/issues/Gh0stlyKn1ght/Neighborhood_BBS)](https://github.com/Gh0stlyKn1ght/Neighborhood_BBS/issues)
 [![GitHub Stars](https://img.shields.io/github/stars/Gh0stlyKn1ght/Neighborhood_BBS?style=social)](https://github.com/Gh0stlyKn1ght/Neighborhood_BBS)
-[![Open Source](https://img.shields.io/badge/Open%20Source-❤-brightgreen)](OPEN_SOURCE.md)
-[![Security Hardened](https://img.shields.io/badge/Security-Hardened-brightgreen.svg)](FIXES_SUMMARY.md)
-[![Tests Passing](https://img.shields.io/badge/Tests-25%2F25-brightgreen.svg)](tests/)
 
 ## 📋 Overview
 
