@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "env": {
+    "PYTHONUNBUFFERED": "1"
+  },
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb",
+        "runtime": "python3.11"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "server/web/static/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "api/index.py"
+    }
+  ],
+  "outputDirectory": "api",
+  "public": "server/web/static"
+}
