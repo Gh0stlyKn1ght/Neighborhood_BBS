@@ -1,0 +1,50 @@
+# Neighborhood BBS - Sample Configuration
+# Copy this to config.conf and customize for your setup
+
+[SERVER]
+# Server host and port
+host = 0.0.0.0
+port = 8080
+debug = false
+secret_key = your-secret-key-here-change-in-production
+
+[NETWORK]
+# Network configuration
+max_connections = 100
+message_timeout = 300
+heartbeat_interval = 30
+
+[DATABASE]
+# Database configuration
+type = sqlite
+path = data/neighborhood.db
+# For production, consider PostgreSQL:
+# type = postgresql
+# host = localhost
+# port = 5432
+# user = nbbs_user
+# password = secure_password
+# db = neighborhood_bbs
+
+[LOGGING]
+# Logging configuration
+level = INFO
+format = %(asctime)s - %(name)s - %(levelname)s - %(message)s
+logfile = logs/neighborhood_bbs.log
+
+[SECURITY]
+# Security settings
+require_auth = false
+password_min_length = 6
+allow_anonymous_posts = true
+rate_limit_messages = 100
+rate_limit_window = 60
+
+[FEATURES]
+# Feature flags
+enable_chat = true
+enable_board = true
+enable_user_profiles = true
+enable_moderation = true
+max_message_length = 1000
+max_post_length = 5000

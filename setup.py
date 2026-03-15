@@ -29,8 +29,8 @@ setup(
     author_email="contact@neighborhood-bbs.local",
     url="https://github.com/Gh0stlyKn1ght/Neighborhood_BBS",
     license="MIT",
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    packages=find_packages(where="server/src"),
+    package_dir={"": "server/src"},
     include_package_data=True,
     python_requires=">=3.7",
     install_requires=requirements,
@@ -46,7 +46,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "neighborhood-bbs=main:main",
+            "neighborhood-bbs=server.src.main:main",
         ],
     },
     classifiers=[
