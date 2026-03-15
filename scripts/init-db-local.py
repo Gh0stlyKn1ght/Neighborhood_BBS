@@ -185,13 +185,13 @@ def init_database():
         )
     print("  ✓ default configuration")
     
-    # Add default retro theme (IBM PC Blue on Black)
+    # Add default retro theme (Cyan CRT Terminal)
     cursor.execute('''
         INSERT OR IGNORE INTO themes 
         (name, primary_color, secondary_color, background_color, text_color, is_active)
         VALUES (?, ?, ?, ?, ?, 1)
-    ''', ('Retro Blue IBM', '#0055FF', '#0077FF', '#000000', '#0055FF'))
-    print("  ✓ retro blue IBM theme (default)")
+    ''', ('Retro Cyan CRT', '#00FFFF', '#00FF99', '#000000', '#00FFFF'))
+    print("  ✓ retro cyan CRT terminal theme (default)")
     
     # Add additional theme option
     cursor.execute('''

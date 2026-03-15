@@ -1,76 +1,298 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neighborhood BBS</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Neighborhood BBS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--g:#00ffff;--dim:#008888;--dark:#0a0a0a;--amb:#ffff00;--red:#ff4444;--bg2:#0f0f0f;--bdr:#1a1a1a}
+html,body{background:var(--dark);color:var(--g);font-family:'Share Tech Mono',monospace;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.13) 2px,rgba(0,0,0,0.13) 4px);pointer-events:none;z-index:50}
+.crt{position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.65) 100%);pointer-events:none;z-index:49}
+.scan{position:fixed;left:0;width:100%;height:3px;background:rgba(0,255,255,0.04);animation:sc 6s linear infinite;pointer-events:none;z-index:51}
+@keyframes sc{0%{top:-3px}100%{top:100%}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── LANDING PAGE ── */
+#landing{display:block;max-width:680px;margin:0 auto;padding:20px 16px 40px;position:relative;z-index:10}
+.bbs-header{border:2px solid var(--g);padding:16px;margin-bottom:20px;position:relative;box-shadow:0 0 20px rgba(0,255,255,0.2)}
+.bbs-header::before{content:'';position:absolute;inset:3px;border:1px solid var(--dim);pointer-events:none}
+.ascii{font-size:clamp(7px,1.8vw,12px);line-height:1.2;color:var(--g);white-space:pre;margin-bottom:10px;text-shadow:0 0 10px var(--g)}
+.board-name{font-size:clamp(18px,5vw,26px);letter-spacing:.15em;color:var(--g);text-shadow:0 0 14px var(--g)}
+.meta{font-size:11px;color:var(--dim);margin-top:6px}
+.meta span{color:var(--amb)}
+.section-head{font-size:11px;color:var(--amb);letter-spacing:.2em;margin-bottom:10px;text-shadow:0 0 5px var(--amb)}
+.bulletin{padding:9px 0;border-bottom:1px solid #111;font-size:clamp(12px,3.5vw,14px);color:var(--g);line-height:1.6;opacity:0;animation:fadein .3s forwards}
+.bulletin:last-child{border-bottom:none}
+.cursor{display:inline-block;width:9px;height:1em;background:var(--g);vertical-align:text-bottom;animation:blink 1s step-end infinite;margin-left:3px}
+.enter-btn{display:block;width:100%;margin-top:20px;padding:12px;background:transparent;border:2px solid var(--g);color:var(--g);font-family:inherit;font-size:14px;letter-spacing:.2em;cursor:pointer;text-shadow:0 0 8px var(--g);transition:all .2s;box-shadow:0 0 10px rgba(0,255,255,0.3)}
+.enter-btn:hover{background:rgba(0,255,255,0.08);box-shadow:0 0 20px rgba(0,255,255,0.5)}
+.footer{margin-top:24px;font-size:10px;color:var(--dim);line-height:1.9}
+.footer span{color:var(--amb)}
+hr.div{border:none;border-top:1px solid #1a1a1a;margin:14px 0}
+
+/* ── IRC CHAT PAGE ── */
+#chat-page{display:none;flex-direction:column;height:100vh;padding:8px;position:relative;z-index:10}
+.titlebar{flex-shrink:0;background:var(--dim);color:#000;font-size:11px;padding:3px 8px;display:flex;gap:8px;align-items:center;margin-bottom:4px;box-shadow:0 0 10px rgba(0,255,255,0.15)}
+.titlebar b{font-weight:700}
+.irc{display:flex;flex:1;gap:3px;min-height:0}
+.sidebar{flex-shrink:0;width:110px;border:1px solid var(--bdr);background:var(--bg2);display:flex;flex-direction:column;font-size:11px;box-shadow:0 0 10px rgba(0,255,255,0.1)}
+.sb-h{background:var(--dim);color:#000;padding:3px 6px;font-size:10px;letter-spacing:.08em;font-weight:700}
+.sb-sec{color:var(--amb);padding:5px 6px 2px;font-size:10px;text-shadow:0 0 3px var(--amb)}
+.sb-i{padding:2px 8px;color:var(--dim);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-i.act{color:var(--g);background:rgba(0,255,255,0.07);text-shadow:0 0 5px var(--g)}
+.sb-i.sys{color:var(--amb);text-shadow:0 0 3px var(--amb)}
+.sb-users{flex:1;overflow-y:auto}
+.main{flex:1;border:1px solid var(--bdr);display:flex;flex-direction:column;min-height:0;min-width:0;box-shadow:0 0 10px rgba(0,255,255,0.1)}
+.chan-tabs{flex-shrink:0;display:flex;background:var(--bg2);border-bottom:1px solid var(--bdr)}
+.ctab{padding:3px 12px;font-family:inherit;font-size:11px;background:transparent;border:none;border-right:1px solid var(--bdr);color:var(--dim);cursor:pointer}
+.ctab.act{color:var(--g);background:rgba(0,255,255,0.06);text-shadow:0 0 5px var(--g)}
+.ctab.unread{color:var(--amb);text-shadow:0 0 3px var(--amb)}
+.topic{flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--bdr);padding:3px 10px;font-size:10px;color:var(--dim)}
+.topic span{color:var(--amb);text-shadow:0 0 3px var(--amb)}
+.pane{display:none;flex:1;flex-direction:column;min-height:0;overflow:hidden}
+.pane.act{display:flex}
+.log{flex:1;overflow-y:auto;padding:5px 10px;font-size:12px;line-height:1.65;scroll-behavior:smooth}
+.log::-webkit-scrollbar{width:3px}
+.log::-webkit-scrollbar-thumb{background:var(--dim)}
+.ln{opacity:0;animation:fadein .2s forwards;word-break:break-word}
+.ln .ts{color:var(--dim);font-size:10px;margin-right:3px;user-select:none}
+.ln .nk{color:var(--amb);text-shadow:0 0 3px var(--amb)}
+.ln .br{color:var(--dim)}
+.ln .bd{color:var(--g);text-shadow:0 0 3px var(--g)}
+.ln.sys .bd{color:var(--dim);font-style:italic}
+.ln.sys .nk{color:var(--dim)}
+/* input always visible — outside panes */
+.input-area{flex-shrink:0;border-top:1px solid var(--bdr);background:var(--bg2)}
+.nick-row{display:flex;align-items:center;border-bottom:1px solid var(--bdr);padding:3px 10px;gap:8px;font-size:10px;color:var(--dim)}
+.nick-in{background:transparent;border:1px solid var(--dim);outline:none;color:var(--amb);font-family:inherit;font-size:11px;padding:1px 5px;width:120px;text-shadow:0 0 3px var(--amb)}
+.nick-in:focus{border-color:var(--g);box-shadow:0 0 5px rgba(0,255,255,0.5);color:var(--g);text-shadow:0 0 5px var(--g)}
+.cr{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:10px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);transition:background .3s;flex-shrink:0}
+.dot.on{background:var(--g);box-shadow:0 0 8px var(--g)}
+.dot.err{background:var(--red)}
+.prompt-row{display:flex;align-items:center;padding:5px 10px;gap:6px}
+.pl{color:var(--dim);font-size:12px;white-space:nowrap;flex-shrink:0}
+.mi{flex:1;background:transparent;border:none;outline:none;color:var(--g);font-family:inherit;font-size:13px;caret-color:var(--g);min-width:0;text-shadow:0 0 3px var(--g)}
+.mi:focus{text-shadow:0 0 8px var(--g)}
+.cc{font-size:10px;color:var(--dim);flex-shrink:0}
+.sbtn{background:transparent;border:1px solid var(--dim);color:var(--dim);font-family:inherit;font-size:10px;padding:2px 8px;cursor:pointer;letter-spacing:.08em;transition:all .15s}
+.sbtn:hover{border-color:var(--g);color:var(--g);text-shadow:0 0 3px var(--g);box-shadow:0 0 5px rgba(0,255,255,0.3)}
+.back-btn{background:transparent;border:none;color:var(--dim);font-family:inherit;font-size:10px;cursor:pointer;padding:0 6px;letter-spacing:.05em}
+.back-btn:hover{color:var(--g);text-shadow:0 0 3px var(--g)}
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🏘️ Neighborhood BBS</h1>
-            <p class="subtitle">Community Board & Chatroom</p>
-        </header>
+<div class="crt"></div>
+<div class="scan"></div>
 
-        <nav class="navbar">
-            <ul>
-                <li><a href="/" class="nav-link active">Home</a></li>
-                <li><a href="/chat" class="nav-link">Chat</a></li>
-                <li><a href="/board" class="nav-link">Board</a></li>
-                <li><a href="/about" class="nav-link">About</a></li>
-            </ul>
-        </nav>
+<!-- ── LANDING PAGE ────────────────────────────────── -->
+<div id="landing">
+  <div class="bbs-header">
+    <div class="ascii">███╗   ██╗███████╗██╗ ██████╗ ██╗  ██╗██████╗  ██████╗ ██████╗ ██╗  ██╗
+████╗  ██║██╔════╝██║██╔════╝ ██║  ██║██╔══██╗██╔═══██╗██╔══██╗██║  ██║
+██╔██╗ ██║█████╗  ██║██║  ███╗███████║██████╔╝██║   ██║██║  ██║███████║
+██║╚██╗██║██╔══╝  ██║██║   ██║██╔══██║██╔══██╗██║   ██║██║  ██║██╔══██║
+██║ ╚████║███████╗██║╚██████╔╝██║  ██║██████╔╝╚██████╔╝██████╔╝██║  ██║
+╚═╝  ╚═══╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚═════╝ ╚═╝  ╚═╝</div>
+    <div class="board-name">NEIGHBORHOOD BBS</div>
+    <div class="meta">SYSOP: <span>LOCAL ADMIN</span> &nbsp;|&nbsp; BAUD: <span>FIBER</span> &nbsp;|&nbsp; VERSION: <span>2.0</span></div>
+  </div>
+  <div class="section-head">[ PUBLIC SERVICE ANNOUNCEMENTS ]</div>
+  <div id="bulletin-list"></div>
+  <button class="enter-btn" onclick="enterChat()">[ ENTER CHAT ROOM → ]</button>
+  <button class="enter-btn" onclick="enterBoard()" style="margin-top:8px">[ VIEW BOARD → ]</button>
+  <div class="footer">
+    <hr class="div">
+    ══════════════════════════════════════════<br>
+    NO SPAM. NO HARASSMENT. BE KIND.<br>
+    BUILD COMMUNITY. SUPPORT YOUR NEIGHBORS.<br>
+    <span>🏘️ STAY CONNECTED 🏘️</span>
+  </div>
+</div>
 
-        <main class="main-content">
-            <section class="hero">
-                <h2>Welcome to Your Neighborhood</h2>
-                <p>Connect with your community, share information, and build stronger neighborhoods.</p>
-                
-                <div class="cta-buttons">
-                    <a href="/chat" class="btn btn-primary">💬 Go to Chat</a>
-                    <a href="/board" class="btn btn-secondary">📌 Visit Board</a>
-                </div>
-            </section>
-
-            <section class="features">
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">💬</div>
-                        <h3>Real-time Chat</h3>
-                        <p>Instant messaging with your neighbors</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">📌</div>
-                        <h3>Community Board</h3>
-                        <p>Post announcements and ask questions</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🔒</div>
-                        <h3>Privacy First</h3>
-                        <p>Keep data local and secure</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">⚡</div>
-                        <h3>Low Power</h3>
-                        <p>Runs on ESP8266 and Zima Board</p>
-                    </div>
-                </div>
-            </section>
-
-            <section class="recent-activity">
-                <h2>Recent Activity</h2>
-                <div id="activity-feed">
-                    <p>Loading recent activity...</p>
-                </div>
-            </section>
-        </main>
-
-        <footer>
-            <p>&copy; 2026 Neighborhood BBS | <a href="https://github.com/Gh0stlyKn1ght/Neighborhood_BBS">GitHub</a></p>
-        </footer>
+<!-- ── IRC CHAT PAGE ───────────────────────────────── -->
+<div id="chat-page">
+  <div class="titlebar">
+    <b>NEIGHBORHOOD BBS</b>
+    <span style="opacity:.5">—</span>
+    <span id="tb-chan">#neighbors</span>
+    <span style="opacity:.5">—</span>
+    <span id="tb-status">READY</span>
+    <button class="back-btn" onclick="backToLanding()">← BACK</button>
+  </div>
+  <div class="irc">
+    <div class="sidebar">
+      <div class="sb-h">CHANNELS</div>
+      <div class="sb-i act" id="sb-chan">#neighbors</div>
+      <div class="sb-i">*status</div>
+      <div class="sb-sec">USERS</div>
+      <div class="sb-users" id="sb-users"><div class="sb-i sys">@ SYSOP</div></div>
     </div>
+    <div class="main">
+      <div class="chan-tabs">
+        <button class="ctab act" id="tab-chat" onclick="showPane('chat')">#neighbors</button>
+        <button class="ctab" id="tab-board" onclick="showPane('board')">board</button>
+      </div>
+      <div class="topic"><span>Topic:</span> LOCAL COMMUNITY — BE NICE — SYSOP: LOCAL ADMIN</div>
+      <div class="pane act" id="pane-chat">
+        <div class="log" id="chat-log"></div>
+      </div>
+      <div class="pane" id="pane-board">
+        <div class="log" id="board-log"></div>
+      </div>
+      <!-- Input OUTSIDE panes so it's always visible -->
+      <div class="input-area">
+        <div class="nick-row">
+          <span>NICK:</span>
+          <input class="nick-in" id="nick-in" maxlength="15" placeholder="RESIDENT_01" autocomplete="off" spellcheck="false">
+          <div class="cr">
+            <div class="dot" id="dot"></div>
+            <span id="conn-txt">—</span>
+            &nbsp;<span style="color:var(--dim)">users:&nbsp;<span id="uc" style="color:var(--g)">0</span></span>
+          </div>
+        </div>
+        <div class="prompt-row">
+          <span class="pl" id="pl">[#neighbors]</span>
+          <input class="mi" id="msg-in" maxlength="119" placeholder="say something nice..." autocomplete="off" spellcheck="false">
+          <span class="cc" id="cc">119</span>
+          <button class="sbtn" onclick="sendMsg()">SEND</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script>
+const PROFANITY=["fuck","shit","bitch","bastard","damn","piss","cock","dick","pussy","cunt","whore","slut","fag","nigger","nigga","retard","spic","chink","kike","twat","wank","prick"];
+let ws, reconnTimer, chan="#neighbors";
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function ts(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function censor(txt){PROFANITY.forEach(w=>{txt=txt.replace(new RegExp('\\b'+w+'\\b','gi'),m=>'*'.repeat(m.length))});return txt}
+
+function addLine(logId,nick,text,cls){
+  const log=document.getElementById(logId);
+  if(!log) return;
+  const el=document.createElement('div');
+  el.className='ln '+(cls||'');
+  if(cls==='sys'){
+    el.innerHTML='<span class="ts">['+ts()+']</span> <span class="nk">*</span> <span class="bd">'+esc(text)+'</span>';
+  } else {
+    el.innerHTML='<span class="ts">['+ts()+']</span><span class="br">&lt;</span><span class="nk">'+esc(nick)+'</span><span class="br">&gt;</span> <span class="bd">'+esc(text)+'</span>';
+  }
+  log.appendChild(el);
+  log.scrollTop=log.scrollHeight;
+  while(log.children.length>200) log.removeChild(log.firstChild);
+}
+
+function setConn(state,txt){
+  document.getElementById('dot').className='dot '+state;
+  document.getElementById('conn-txt').textContent=txt;
+  document.getElementById('tb-status').textContent=txt;
+}
+function setUC(n){ document.getElementById('uc').textContent=n; }
+
+// ── Landing page ──────────────────────────────────────────
+function loadBulletins(list){
+  const container=document.getElementById('bulletin-list');
+  container.innerHTML='';
+  list.forEach((b,i)=>{
+    const d=document.createElement('div');
+    d.className='bulletin';
+    d.style.animationDelay=(i*120)+'ms';
+    d.innerHTML='&gt;&gt; '+esc(b)+(i===list.length-1?'<span class="cursor"></span>':'');
+    container.appendChild(d);
+  });
+}
+
+function enterChat(){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('chat-page').style.display='flex';
+  document.getElementById('msg-in').focus();
+  if(!ws||ws.readyState>1) connect();
+}
+
+function enterBoard(){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('chat-page').style.display='flex';
+  document.getElementById('msg-in').style.display='none';
+  document.getElementById('nick-in').parentElement.style.display='none';
+  showPane('board');
+}
+
+function backToLanding(){
+  document.getElementById('chat-page').style.display='none';
+  document.getElementById('landing').style.display='block';
+  if(ws) ws.close();
+}
+
+// ── Pane switching ────────────────────────────────────────
+function showPane(name){
+  ['chat','board'].forEach(p=>{
+    document.getElementById('pane-'+p).classList.toggle('act', p===name);
+    document.getElementById('tab-'+p).classList.toggle('act', p===name);
+    if(p===name) document.getElementById('tab-'+p).classList.remove('unread');
+  });
+  document.getElementById('pl').textContent = name==='board'?'[board]':'['+chan+']';
+  if(name==='chat') document.getElementById('msg-in').focus();
+}
+
+// ── WebSocket ─────────────────────────────────────────────
+function connect(){
+  if(ws&&ws.readyState<2) return;
+  setConn('','CONNECTING');
+  const proto = location.protocol==='https:'?'wss:':'ws:';
+  ws=new WebSocket(proto+'//'+location.host+'/chat');
+  ws.onopen=()=>{
+    setConn('on','CONNECTED');
+    addLine('chat-log',null,'*** Connected to NEIGHBORHOOD BBS','sys');
+    addLine('chat-log',null,'*** Joining '+chan+'...','sys');
+  };
+  ws.onclose=()=>{
+    setConn('err','DISCONNECTED');
+    addLine('chat-log',null,'*** Disconnected. Retrying...','sys');
+    reconnTimer=setTimeout(connect,4000);
+  };
+  ws.onerror=()=>setConn('err','ERROR');
+  ws.onmessage=(e)=>{
+    const d=JSON.parse(e.data);
+    if(d.type==='history'){
+      d.msgs.forEach(m=>m.is_system?addLine('chat-log',null,m.content,'sys'):addLine('chat-log',m.username||'ANON',m.content,''));
+      if(d.msgs.length) setUC(d.msgs.length);
+    } else if(d.type==='message'){
+      addLine('chat-log',d.username||'ANON',d.content,'');
+      if(!document.getElementById('tab-chat').classList.contains('act'))
+        document.getElementById('tab-chat').classList.add('unread');
+    } else if(d.type==='system'){
+      addLine('chat-log',null,d.content,'sys');
+    }
+  };
+}
+
+function getNick(){
+  let n=document.getElementById('nick-in').value.trim().replace(/[^a-zA-Z0-9_\-]/g,'');
+  return n.length?n.substring(0,15).toUpperCase():'RESIDENT_'+(Math.floor(Math.random()*900)+100);
+}
+
+function sendMsg(){
+  const inp=document.getElementById('msg-in');
+  const raw=inp.value.trim();
+  if(!raw||!ws||ws.readyState!==1) return;
+  ws.send(JSON.stringify({username:getNick(),content:censor(raw)}));
+  inp.value='';
+  document.getElementById('cc').textContent='119';
+}
+
+document.getElementById('msg-in').addEventListener('keydown',e=>{if(e.key==='Enter')sendMsg()});
+document.getElementById('msg-in').addEventListener('input',e=>{document.getElementById('cc').textContent=119-e.target.value.length});
+document.getElementById('nick-in').addEventListener('input',e=>{e.target.value=e.target.value.replace(/[^a-zA-Z0-9_\-]/g,'')});
+
+// ── Init ──────────────────────────────────────────────────
+loadBulletins(["🏘️ WELCOME TO NEIGHBORHOOD BBS","🔗 CONNECT WITH YOUR COMMUNITY","💬 CHAT. SHARE. SUPPORT.","🌟 BE NICE TO EACH OTHER"]);
+</script>
 </body>
 </html>
