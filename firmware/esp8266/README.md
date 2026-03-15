@@ -71,8 +71,7 @@ Upload files:
 
 ```bash
 ampy --port /dev/ttyUSB0 put main.py
-ampy --port /dev/ttyUSB0 put config.py
-ampy --port /dev/ttyUSB0 put -d lib
+ampy --port /dev/ttyUSB0 put config.json
 ```
 
 ### Using WebREPL
@@ -83,15 +82,22 @@ ampy --port /dev/ttyUSB0 put -d lib
 
 ## Configuration
 
-Edit `config.py` to set:
+Create a `config.json` file on the ESP8266 (same directory as `main.py`):
 
-```python
-SSID = "Your_WiFi_SSID"
-PASSWORD = "Your_WiFi_Password"
-SERVER_HOST = "192.168.1.100"  # Main server IP
-SERVER_PORT = 8080
-DEVICE_NAME = "ESP8266_Neighborhood_1"
+```json
+{
+  "ssid": "Your_WiFi_SSID",
+  "password": "Your_WiFi_Password",
+  "server_host": "192.168.1.100",
+  "server_port": 8080,
+  "use_https": false,
+  "device_name": "ESP8266_Neighborhood_1",
+  "reconnect_interval": 300,
+  "timeout": 10
+}
 ```
+
+**Note:** If `config.json` is missing, the client will use safe defaults and prompt for configuration. Copy `config.json.example` to `config.json` and edit with your settings.
 
 ## Running the Application
 
@@ -99,8 +105,15 @@ Via REPL:
 
 ```python
 import main
-main.start()
 ```
+
+The `main()` function will automatically:
+1. Load `config.json` with WiFi and server settings
+2. Connect to WiFi
+3. Test server connectivity
+4. Display available chat rooms
+5. Send a test message
+6. Enter main loop with periodic heartbeat
 
 ## Troubleshooting
 
@@ -116,9 +129,15 @@ Get-Content com:  # Windows
 
 ### WiFi Connection Issues
 
-- Verify SSID and password in config.py
+- Verify SSID and password in `config.json`
 - Check WiFi signal strength
-- Ensure main server is accessible
+- Ensure main server is accessible at the configured `server_host:server_port`
+- Test with the REPL to verify configuration loaded:
+  ```python
+  from src.utils.helpers import ConfigManager
+  config = ConfigManager.load()
+  print(config)
+  ```
 
 ### Memory Issues
 
@@ -131,20 +150,40 @@ ESP8266 has limited memory (4MB). Optimize by:
 
 ### Main Files
 
-- `main.py` - Application entry point
-- `config.py` - Configuration
-- `network.py` - WiFi connectivity
-- `client.py` - MQTT/HTTP client
-- `sensor.py` - Optional sensor integration
+- `main.py` - Application entry point with NeighborhoodBBSClient class
+- `config.json` - Runtime configuration (loaded from file)
+- `config.json.example` - Configuration template
+
+### Application Classes
+
+**ConfigManager** - Loads/saves `config.json`
+
+- `load()` - Returns config dict, falls back to defaults if file missing
+- `save(config)` - Persists configuration to file
+
+**NeighborhoodBBSClient** - Main client implementation
+
+- `connect_wifi()` - Connects to WiFi with retry logic
+- `send_message(room_id, message, author)` - Posts message to room
+- `get_messages(room_id, limit)` - Retrieves message history
+- `get_rooms()` - Lists available chat rooms
+- `heartbeat()` - Tests server connectivity
+- `get_status()` - Returns connection/uptime status
 
 ### Testing
 
 Connect via REPL and test commands:
 
 ```python
-from main import *
-device.connect_to_server()
-device.send_message("general", "Hello from ESP8266!")
+import main
+config = main.ConfigManager.load()
+print(f"Config loaded: {config}")
+
+client = main.NeighborhoodBBSClient(config)
+client.connect_wifi()
+rooms = client.get_rooms()
+print(f"Available rooms: {rooms}")
+client.send_message(1, "Hello from ESP8266!")
 ```
 
 ## Resources

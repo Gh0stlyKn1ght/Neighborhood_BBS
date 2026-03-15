@@ -1,0 +1,10 @@
+{
+  "ssid": "Your_WiFi_SSID",
+  "password": "Your_WiFi_Password",
+  "server_host": "192.168.1.100",
+  "server_port": 8080,
+  "use_https": false,
+  "device_name": "ESP8266_Neighborhood_1",
+  "reconnect_interval": 300,
+  "timeout": 10
+}
