@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Neighborhood BBS Logo](https://raw.githubusercontent.com/Gh0stlyKn1ght/Neighborhood_BBS/main/logo.png)
+![Neighborhood BBS Logo](web/static/images/logo.png)
 
 </div>
 
