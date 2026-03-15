@@ -57,6 +57,47 @@ chmod +x scripts/setup-local.sh scripts/run-local.sh
 
 ---
 
+## Run on Raspberry Pi 🍓
+
+Once you're comfortable locally, deploy to a Raspberry Pi as a dedicated server:
+
+### Ultra-Quick Setup
+```bash
+# One-liner from Raspberry Pi:
+curl https://raw.githubusercontent.com/Gh0stlyKn1ght/Neighborhood_BBS/main/firmware/raspberry-pi/setup.sh | bash
+```
+
+The script automatically:
+1. Installs all dependencies
+2. Sets up Python virtual environment
+3. Initializes database
+4. Creates systemd service (auto-starts on reboot)
+5. Installs Nginx reverse proxy (optional HTTPS)
+
+### After Setup
+```bash
+# Start service
+sudo systemctl start neighborhood-bbs
+
+# Check status
+sudo systemctl status neighborhood-bbs
+
+# View logs
+sudo journalctl -u neighborhood-bbs -f
+
+# Access
+http://raspberrypi.local:8080
+```
+
+### Hardware Options
+- **Pi 3B+** - Entry-level, ~$35
+- **Pi 4** - Best value, ~$55 (recommended)
+- **Pi 5** - Latest, ~$80
+
+**See:** [firmware/raspberry-pi/README.md](firmware/raspberry-pi/README.md) for advanced setup (HTTPS, Nginx, optimization)
+
+---
+
 ## Connect WiFi Devices (ESP8266/ESP32) 📡
 
 Once the local server is running, you can connect IoT devices:
@@ -147,7 +188,12 @@ http://localhost:8080
 ---
 
 ## What's Next?
-
+### 🍓 Run on Raspberry Pi
+Deploy as a dedicated server for your neighborhood:
+- Automatic one-command setup
+- Runs 24/7
+- Auto-starts on power loss
+- See [firmware/raspberry-pi/README.md](firmware/raspberry-pi/README.md)
 ### � Add WiFi Devices
 Connect ESP8266/ESP32 nodes to your BBS:
 - See [firmware/esp8266/README.md](firmware/esp8266/README.md)

@@ -302,6 +302,194 @@ LOG_LEVEL=WARNING  # Only warnings and errors
 
 ---
 
+## Deploy on Raspberry Pi 🍓
+
+Once you've tested locally, deploy to a Raspberry Pi as a permanent server:
+
+### Hardware Options
+
+| Model | Cost | Power | RAM | Recommended |
+|-------|------|-------|-----|-------------|
+| **Pi 3B+** | $35 | 2.5W | 1GB | ✅ Entry-level |
+| **Pi 4** | $55 | 3.5W | 4GB | ⭐ **Best value** |
+| **Pi 5** | $80 | 4W | 8GB | 🚀 Latest |
+
+All models work great! Pi 4 is typically the sweet spot.
+
+### Step 1: Set Up Raspberry Pi OS
+
+1. Download [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+2. Select: **Raspberry Pi OS Lite (64-bit)**
+3. Write to 32GB+ SD card
+4. Insert and power on
+
+### Step 2: One-Command Installation
+
+SSH into your Pi:
+```bash
+ssh pi@raspberrypi.local
+# Default password: raspberry
+```
+
+Run the automated setup:
+```bash
+curl https://raw.githubusercontent.com/Gh0stlyKn1ght/Neighborhood_BBS/main/firmware/raspberry-pi/setup.sh | bash
+```
+
+The script runs 8 automated steps:
+1. ✅ System compatibility check
+2. ✅ Update packages (apt-get)
+3. ✅ Install dependencies
+4. ✅ Clone repository
+5. ✅ Create virtual environment
+6. ✅ Install Python packages
+7. ✅ Initialize database
+8. ✅ Create systemd service
+
+Takes about 10-15 minutes on Pi 4.
+
+### Step 3: Start the Service
+
+```bash
+# Start
+sudo systemctl start neighborhood-bbs
+
+# Check status
+sudo systemctl status neighborhood-bbs
+
+# View logs
+sudo journalctl -u neighborhood-bbs -f
+
+# Enable auto-start on reboot
+sudo systemctl enable neighborhood-bbs
+```
+
+### Step 4: Access Your BBS
+
+From any device on your network:
+```
+http://raspberrypi.local:8080
+```
+
+Or use Pi's IP address:
+```bash
+# Find Pi's IP
+hostname -I
+
+# Access
+http://192.168.x.x:8080
+```
+
+### Configuration
+
+Edit `.env` on the Pi:
+```bash
+ssh pi@raspberrypi.local
+nano ~/Neighborhood_BBS/.env
+```
+
+Key settings:
+```env
+PORT=8080                    # Web server port
+FLASK_DEBUG=False           # Production mode
+WORKERS=2                   # Auto-tune for Pi
+DEBUG=false                 # Disable verbose logging
+```
+
+### Advanced Features (Optional)
+
+**Enable HTTPS (Let's Encrypt):**
+```bash
+sudo certbot --nginx -d yourdomain.com
+```
+
+**Set up Nginx reverse proxy:**
+See [firmware/raspberry-pi/README.md](firmware/raspberry-pi/README.md#nginx-reverse-proxy-optional)
+
+**Monitor system resources:**
+```bash
+# CPU/Memory usage
+top
+
+# Disk space
+df -h
+
+# Temperature (Pi 4/5)
+vcgencmd measure_temp
+```
+
+### Backup Your Data
+
+```bash
+# SSH into Pi and backup database
+ssh pi@raspberrypi.local
+scp pi@raspberrypi.local:~/Neighborhood_BBS/data/neighborhood_bbs.db ./backup-$(date +%Y-%m-%d).db
+```
+
+### Performance Optimization
+
+For multiple users/devices:
+
+```bash
+# On Pi: Increase swap memory
+sudo dphys-swapfile swapoff
+sudo sed -i 's/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=2048/' /etc/dphys-swapfile
+sudo dphys-swapfile swapon
+
+# Monitor
+free -h
+```
+
+### Useful Commands
+
+```bash
+# Restart service
+sudo systemctl restart neighborhood-bbs
+
+# Stop service
+sudo systemctl stop neighborhood-bbs
+
+# View service logs
+sudo journalctl -u neighborhood-bbs -n 100
+
+# Test API health
+curl http://localhost:8080/health
+
+# Check network connectivity
+hostname -I
+netstat -an | grep 8080
+```
+
+### Troubleshooting
+
+**Service won't start:**
+```bash
+sudo journalctl -u neighborhood-bbs -f
+# Check for errors in logs
+```
+
+**Out of disk space:**
+```bash
+df -h  # Check usage
+sudo apt-get clean  # Clear apt cache
+```
+
+**High CPU usage:**
+```bash
+top  # Identify process
+sudo systemctl restart neighborhood-bbs
+```
+
+**Port already in use:**
+```bash
+sudo lsof -i :8080  # See what's using port
+# Change PORT in .env and restart
+```
+
+**Full documentation:** [firmware/raspberry-pi/README.md](firmware/raspberry-pi/README.md)
+
+---
+
 ## Connect WiFi Devices (ESP8266/ESP32) 📡
 
 The local server can host IoT devices like ESP8266 microcontrollers:
