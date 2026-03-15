@@ -1,12 +1,23 @@
 # ESP8266 Firmware for Neighborhood BBS
 
-This directory contains MicroPython firmware for running Neighborhood BBS on ESP8266 devices.
+Run Neighborhood BBS on ESP8266 devices with the retro cyan CRT terminal theme - a portable WiFi-enabled BBS node.
+
+## Features
+
+- **Retro Cyan CRT Terminal Interface** - Classic ASCII art aesthetic  
+- **WiFi Hotspot Mode** - Creates "NEIGHBORHOOD_BBS" SSID
+- **Real-time Chat** - WebSocket-powered messaging
+- **Captive Portal** - Auto-redirect for easy access
+- **Message Filtering** - Profanity censoring and XSS protection
+- **Ring Buffer Chat** - Last 24 messages stored in RAM
+- **Local Only** - No internet required, works offline
 
 ## Hardware Requirements
 
 - ESP8266 (NodeMCU, Wemos D1 Mini, etc.)
 - USB Cable for flashing
-- WiFi connectivity
+- 3.3V USB power supply recommended
+- Optional: Heatsink for prolonged use
 
 ## Prerequisites
 

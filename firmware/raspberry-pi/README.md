@@ -1,6 +1,15 @@
 # Raspberry Pi - Neighborhood BBS Deployment
 
-This guide covers deploying Neighborhood BBS on Raspberry Pi (3B+, 4, and 5).
+Deploy Neighborhood BBS on Raspberry Pi (3B+, 4, and 5) with the retro cyan CRT terminal theme.
+
+## Features
+
+- **Retro Cyan CRT Terminal Theme** - Classic monospace interface with scanline effects
+- **IRC-Style Chat** - Real-time community chat with channels and user lists  
+- **Community Board** - Post and view messages from your neighborhood
+- **Hardware-Only Logging** - Privacy-first, no user tracking
+- **Local Network** - Access from any device on your WiFi network
+- **Easy Deployment** - One-command setup via systemd service
 
 ## Hardware Requirements
 
@@ -106,7 +115,13 @@ python scripts/init_db.py
 python src/main.py
 ```
 
-Visit: `http://raspberrypi.local:8080` from any device on your network
+Browse to `http://raspberrypi.local:8080` from any device on your network
+
+**You'll see:**
+- 🖥️ Cyan CRT terminal interface with ASCII art header
+- 💬 Real-time IRC-style chat room
+- 📋 Community announcement board
+- 🏘️ Local neighborhood communication
 
 ## Running as a Service
 

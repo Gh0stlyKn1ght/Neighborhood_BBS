@@ -24,7 +24,18 @@
 - 🌐 **WiFi Connected** - Easy setup and connectivity
 - 📜 **100% Open Source** - MIT License, fully transparent
 
-## 🎯 Supported Hardware
+## 🖥️ Retro Cyan CRT Terminal Theme
+
+All platforms share the **same retro aesthetic**:
+
+- **Cyan on Black** - Classic monospace terminal feel (#00FFFF on #000000)
+- **CRT Scanlines** - Authentic monitor effect overlay
+- **IRC-Style Chat** - User list, channels, message timestamps
+- **ASCII Art Headers** - Nostalgic BBS welcome screens
+- **Glow Effects** - Cyan text shadows and highlights
+- **Real-time Updates** - WebSocket chat with instant delivery
+
+Access from any device: **http://raspberrypi.local:8080** (or your device's IP)
 
 | Device | Status | Cost | Power | Setup |
 |--------|--------|------|-------|-------|
