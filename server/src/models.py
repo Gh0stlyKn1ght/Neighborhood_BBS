@@ -143,6 +143,66 @@ class Database:
             )
         ''')
         
+        # IP whitelist table (for IP-based access control - PHASE 3)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ip_whitelist (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ip_address TEXT UNIQUE NOT NULL,
+                description TEXT,
+                added_by TEXT,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_active BOOLEAN DEFAULT 1
+            )
+        ''')
+        
+        # User registrations table (for optional user accounts - PHASE 3)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_registrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                is_active BOOLEAN DEFAULT 1,
+                requires_approval BOOLEAN DEFAULT 0,
+                approved_by TEXT,
+                approved_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP
+            )
+        ''')
+        
+        # Access approval requests table (for approval workflow - PHASE 3)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS access_approvals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                email TEXT NOT NULL,
+                reason TEXT,
+                ip_address TEXT,
+                device_info TEXT,
+                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                status TEXT DEFAULT 'pending',  -- 'pending', 'approved', 'rejected'
+                approved_by TEXT,
+                approved_at TIMESTAMP,
+                rejection_reason TEXT,
+                UNIQUE(username, requested_at)
+            )
+        ''')
+        
+        # Access control token table (for email verification - PHASE 3)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS access_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token TEXT UNIQUE NOT NULL,
+                username TEXT NOT NULL,
+                token_type TEXT,  -- 'email_verification', 'password_reset', 'approval'
+                expires_at TIMESTAMP NOT NULL,
+                used_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (username) REFERENCES user_registrations(username)
+            )
+        ''')
+        
         # Chat messages table (supports privacy modes)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS messages (
@@ -256,6 +316,14 @@ class Database:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_suspensions_active ON user_suspensions(is_active)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_moderation_logs_taken_at ON moderation_logs(taken_at)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_moderation_rules_enabled ON moderation_rules(enabled)')
+        # PHASE 3 - Access Control indexes
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ip_whitelist_active ON ip_whitelist(is_active)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_registrations_active ON user_registrations(is_active)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_registrations_approved ON user_registrations(requires_approval, approved_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_access_approvals_status ON access_approvals(status)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_access_approvals_requested ON access_approvals(requested_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_access_tokens_expires ON access_tokens(expires_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_access_tokens_username ON access_tokens(username)')
         
         conn.commit()
         conn.close()
