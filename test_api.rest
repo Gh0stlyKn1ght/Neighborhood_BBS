@@ -6,7 +6,7 @@
 # 
 # Instructions:
 # 1. Install VS Code extension: REST Client (humao.rest-client)
-# 2. Start the server: python src/main.py
+# 2. Start the server: cd server && python src/main.py
 # 3. Click "Send Request" above each test block to execute
 # 4. Results appear in the "Response" panel
 #
@@ -510,7 +510,7 @@ GET @baseUrl/api/board/posts?limit=30&offset=20
 # 500 - Internal Server Error (unexpected error)
 
 # Testing Workflow:
-# 1. Start fresh database: rm data/neighborhood.db && python src/main.py
+# 1. Start fresh database: rm data/neighborhood.db && cd server && python src/main.py
 # 2. Run this test file from top to bottom
 # 3. Monitor terminal output for logs
 # 4. Check response status and body

@@ -26,7 +26,7 @@ Get-Process python -ErrorAction SilentlyContinue | Write-Host "Python still runn
 ### Linux/Pi
 ```bash
 # Stop the server
-sudo systemctl stop neighborhood-bbs 2>/dev/null || pkill -f "python src/main.py"
+sudo systemctl stop neighborhood-bbs 2>/dev/null || pkill -f "python server/src/main.py"
 
 # Disable auto-start (if using systemd)
 sudo systemctl disable neighborhood-bbs 2>/dev/null

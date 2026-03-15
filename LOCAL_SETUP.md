@@ -47,14 +47,14 @@ pip install -r requirements-dev.txt
 
 #### Step 4: Initialize Database
 ```powershell
-python scripts/init-db-local.py
-python scripts/create_admin_user.py
+python server/scripts/init-db-local.py
+python server/scripts/create_admin_user.py
 # Follow prompts to create first admin account
 ```
 
 #### Step 5: Run the Application
 ```powershell
-python src/main.py
+python server/src/main.py
 ```
 
 You should see:
@@ -156,7 +156,7 @@ HOST=127.0.0.1
 
 ### Initialize Fresh Database
 ```powershell
-python scripts/init-db-local.py
+python server/scripts/init-db-local.py
 ```
 
 ### Reset Everything
@@ -168,8 +168,8 @@ Copy-Item data/neighborhood_bbs.db data/backups/neighborhood_bbs.db.backup
 Remove-Item data/neighborhood_bbs.db
 
 # Reinitialize
-python scripts/init-db-local.py
-python scripts/create_admin_user.py
+python server/scripts/init-db-local.py
+python server/scripts/create_admin_user.py
 ```
 
 ---
@@ -202,6 +202,7 @@ pytest --cov=src tests/
 
 ### 2. Start Development Server
 ```powershell
+cd server
 python src/main.py
 # Auto-reloads on file changes (FLASK_DEBUG=True)
 ```
@@ -262,7 +263,7 @@ chmod 755 data
 ### Issue: "Admin login fails"
 **Solution:** Recreate admin account
 ```powershell
-python scripts/create_admin_user.py
+python server/scripts/create_admin_user.py
 # Enter username: admin
 # Enter password: your-new-password
 ```
@@ -577,7 +578,7 @@ For secure remote access, see `docs/VPN_SETUP.md`
 
 1. **Create Admin Account:**
    ```powershell
-   python scripts/create_admin_user.py
+   python server/scripts/create_admin_user.py
    ```
 
 2. **Configure Network Settings:**

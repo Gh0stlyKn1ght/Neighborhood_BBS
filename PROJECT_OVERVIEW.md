@@ -262,10 +262,10 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # 4. Initialize database
-python scripts/init_db.py
+python server/scripts/init_db.py
 
 # 5. Run the server
-python src/main.py
+python server/src/main.py
 
 # 6. Open browser
 # Visit: http://localhost:8080
@@ -286,7 +286,7 @@ flake8 src/
 mypy src/
 
 # Run in debug mode
-FLASK_ENV=development DEBUG=true python src/main.py
+FLASK_ENV=development DEBUG=true python server/src/main.py
 ```
 
 ---
@@ -452,7 +452,7 @@ API.replyToPost(postId, author, content)
 ### Environment Variables (`.env`)
 
 ```env
-FLASK_APP=src/server.py
+FLASK_APP=server/src/main.py
 FLASK_ENV=production
 DEBUG=false
 SECRET_KEY=your-secret-key-here
@@ -570,7 +570,7 @@ python src/main.py
 
 ### Database Error
 ```bash
-python scripts/reset_db.py
+python server/scripts/reset_db.py
 ```
 
 ### Import Errors

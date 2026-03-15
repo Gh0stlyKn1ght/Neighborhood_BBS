@@ -263,7 +263,7 @@ User=nbbs
 Group=nbbs
 WorkingDirectory=/home/nbbs/Neighborhood_BBS
 Environment="PATH=/home/nbbs/Neighborhood_BBS/venv/bin"
-ExecStart=/home/nbbs/Neighborhood_BBS/venv/bin/python src/main.py
+ExecStart=/home/nbbs/Neighborhood_BBS/venv/bin/python server/src/main.py
 Restart=always
 RestartSec=10
 StandardOutput=append:/var/log/neighborhood-bbs.log

@@ -118,14 +118,16 @@ The **Neighborhood BBS** project is a well-structured, professionally maintained
 - tests/conftest.py adds `src/` to sys.path
 - When running from src/ directory, imports work as package imports
 
-**Recommendation:** Add consistency note to DEVELOPMENT.md:
+**Recommendation:** Run from project root with proper paths:
 ```bash
 # Correct way to run
-python src/main.py      # From project root with src/ in path
-cd src && python main.py # From src/ directory
+python server/src/main.py  # From project root
+
+# Or change to server directory first
+cd server && python src/main.py
 ```
 
-**Action:** ✅ No code changes needed, just documentation.
+**Action:** ✅ Structure reorganized for clarity.
 
 ---
 

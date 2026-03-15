@@ -499,7 +499,7 @@ Type=simple
 User=bbs
 WorkingDirectory=/opt/neighborhood-bbs
 Environment="PATH=/opt/neighborhood-bbs/venv/bin"
-ExecStart=/opt/neighborhood-bbs/venv/bin/python src/main.py
+ExecStart=/opt/neighborhood-bbs/venv/bin/python server/src/main.py
 Restart=on-failure
 RestartSec=10
 

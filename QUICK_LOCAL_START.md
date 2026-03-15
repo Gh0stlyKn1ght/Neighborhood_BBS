@@ -155,12 +155,13 @@ pip install -r requirements-dev.txt
 
 ### 4. Initialize Database
 ```bash
-python scripts/init-db-local.py
-python scripts/create_admin_user.py
+python server/scripts/init-db-local.py
+python server/scripts/create_admin_user.py
 ```
 
 ### 5. Run the Server
 ```bash
+cd server
 python src/main.py
 ```
 

@@ -17,7 +17,7 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # 4. Run the server
-python src/main.py
+python server/src/main.py
 
 # 5. Open browser
 # Visit: http://localhost:8080
@@ -66,11 +66,10 @@ ampy --port /dev/ttyUSB0 put firmware/esp8266/main.py
 
 ```
 Neighborhood_BBS/
-├── src/           ← Main server code
-├── firmware/      ← ESP8266 & Zima firmware
-├── web/           ← Frontend code
+├── server/        ← Main server code
+├── devices/       ← Device implementations (ESP8266, Zima, etc)
 ├── docs/          ← Documentation
-└── tests/         ← Test suite
+└── [config files]
 ```
 
 ## 🎯 Common Commands
@@ -79,7 +78,7 @@ Neighborhood_BBS/
 
 ```bash
 # Run tests
-pytest tests/
+cd server && pytest tests/
 
 # Check code quality
 black src/
@@ -87,17 +86,17 @@ flake8 src/
 mypy src/
 
 # Run in debug mode
-FLASK_ENV=development python src/main.py
+cd server && FLASK_ENV=development python src/main.py
 ```
 
 ### Database
 
 ```bash
 # Initialize database
-python scripts/init_db.py
+python server/scripts/init_db.py
 
 # Reset database (warning: deletes data!)
-python scripts/reset_db.py
+python server/scripts/reset_db.py
 ```
 
 ### Git

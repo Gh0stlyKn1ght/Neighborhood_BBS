@@ -97,7 +97,7 @@ cd Neighborhood_BBS
 pip install -r requirements.txt
 
 # Run the server
-python src/main.py
+python server/src/main.py
 ```
 
 **Access the app:** Open your browser to `http://localhost:8080`
@@ -106,33 +106,28 @@ python src/main.py
 
 ```
 Neighborhood_BBS/
-├── src/                    # Main application source code
-│   ├── main.py            # Entry point
-│   ├── server.py          # Server implementation
-│   ├── chat/              # Chat module
-│   ├── board/             # Community board module
-│   └── utils/             # Utility functions
-├── firmware/              # Embedded firmware
-│   ├── esp8266/           # ESP8266 MicroPython code
-│   ├── zima/              # Zima Board specific code
-│   └── common/            # Shared firmware utilities
-├── web/                   # Web frontend
-│   ├── static/            # CSS, JS, images
-│   ├── templates/         # HTML templates
-│   └── assets/            # Icons and media
-├── docs/                  # Documentation
-│   ├── SETUP.md          # Setup instructions
-│   ├── API.md            # API documentation
-│   └── DEVELOPMENT.md    # Developer guide
-├── config/               # Configuration files
-│   ├── default.conf      # Default configuration
-│   └── sample.conf       # Sample configuration
-├── .github/              # GitHub templates
-│   ├── workflows/        # CI/CD pipelines
-│   └── ISSUE_TEMPLATE/   # Issue templates
-├── requirements.txt      # Python dependencies
-├── .gitignore           # Git ignore rules
-├── LICENSE              # Project license
+├── server/                 # Main BBS server
+│   ├── src/               # Python source code
+│   │   ├── main.py       # Entry point
+│   │   ├── server.py     # Flask app
+│   │   ├── models.py     # Database models
+│   │   ├── admin/        # Admin module
+│   │   ├── board/        # Board module
+│   │   ├── chat/         # Chat module
+│   │   └── utils/        # Utilities
+│   ├── web/              # Frontend
+│   │   ├── static/       # CSS, JS, images
+│   │   └── templates/    # HTML templates
+│   ├── config/           # Configuration
+│   ├── scripts/          # Admin scripts
+│   └── tests/            # Tests
+├── devices/              # Device implementations
+│   ├── esp8266/          # ESP8266 firmware
+│   ├── raspberry-pi/     # Raspberry Pi setup
+│   ├── zima/             # Zima Board setup
+│   └── docker/           # Docker configs
+├── docs/                 # Documentation
+├── requirements.txt      # Dependencies
 └── README.md            # This file
 ```
 
@@ -168,10 +163,10 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements-dev.txt
 
 # Run tests
-pytest tests/
+pytest server/tests/
 
 # Start development server
-python src/main.py --debug
+python server/src/main.py --debug
 ```
 
 ### Building Firmware

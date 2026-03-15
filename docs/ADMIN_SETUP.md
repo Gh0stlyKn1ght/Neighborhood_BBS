@@ -5,12 +5,12 @@
 ### 1. Initialize Database
 ```bash
 cd /path/to/Neighborhood_BBS
-python src/main.py init-db
+python server/src/main.py init-db
 ```
 
 ### 2. Create Admin User
 ```bash
-python scripts/create_admin_user.py \
+python server/scripts/create_admin_user.py \
   --username admin \
   --password MySecurePass123 \
   --email admin@neighborhood.bbs \
@@ -19,6 +19,7 @@ python scripts/create_admin_user.py \
 
 ### 3. Start the Server
 ```bash
+cd server
 python src/main.py
 ```
 

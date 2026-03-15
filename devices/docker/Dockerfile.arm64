@@ -36,8 +36,7 @@ EXPOSE 8080
 ENV FLASK_APP=src/main.py
 ENV PYTHONUNBUFFERED=1
 ENV HOST=0.0.0.0
-ENV PORT=8080
-
+ENV PORT=8080WORKDIR /app/server
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/').read()" || exit 1

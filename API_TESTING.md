@@ -9,6 +9,7 @@ code --install-extension humao.rest-client
 
 ### 2. Start the Server
 ```bash
+cd server
 python src/main.py
 ```
 
@@ -208,7 +209,7 @@ Check that HTML tags are stripped:
 ## Troubleshooting
 
 ### "Connection Refused"
-- Make sure server is running: `python src/main.py`
+- Make sure server is running: `cd server && python src/main.py`
 - Check it's listening on http://localhost:8080
 
 ### "400 Bad Request"
@@ -260,7 +261,7 @@ Tests can be converted to `requests` library calls for automated testing.
 Before deployment, verify:
 
 - [ ] All 25 unit tests pass: `pytest tests/test_basic.py -v`
-- [ ] Server starts without errors: `python src/main.py`
+- [ ] Server starts without errors: `cd server && python src/main.py`
 - [ ] Health endpoint responds: `GET /health` → 200 OK
 - [ ] Create room works: `POST /api/chat/rooms` → 201 Created
 - [ ] Send message works: `POST /api/chat/send` → 201 Created

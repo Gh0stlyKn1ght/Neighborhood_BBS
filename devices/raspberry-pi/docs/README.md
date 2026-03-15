@@ -106,12 +106,13 @@ pip install -r requirements.txt
 ### 6. Initialize Database
 
 ```bash
-python scripts/init_db.py
+python server/scripts/init_db.py
 ```
 
 ### 7. Run the Server
 
 ```bash
+cd server
 python src/main.py
 ```
 
@@ -141,7 +142,7 @@ Type=simple
 User=pi
 WorkingDirectory=/home/pi/Neighborhood_BBS
 Environment="PATH=/home/pi/Neighborhood_BBS/venv/bin"
-ExecStart=/home/pi/Neighborhood_BBS/venv/bin/python src/main.py
+ExecStart=/home/pi/Neighborhood_BBS/venv/bin/python server/src/main.py
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -174,7 +175,7 @@ sudo journalctl -u neighborhood-bbs -f
 crontab -e
 
 # Add this line:
-@reboot cd ~/Neighborhood_BBS && source venv/bin/activate && python src/main.py >> ~/logs/nbbs.log 2>&1
+@reboot cd ~/Neighborhood_BBS && source venv/bin/activate && python server/src/main.py >> ~/logs/nbbs.log 2>&1
 ```
 
 ## Nginx Reverse Proxy (Optional)

@@ -68,7 +68,7 @@ pip install -r requirements.txt
 
 # 7. Initialize database
 echo -e "${YELLOW}[7/8]${NC} Initializing database..."
-python scripts/init_db.py
+python server/scripts/init_db.py
 
 # 8. Create systemd service
 echo -e "${YELLOW}[8/8]${NC} Installing systemd service..."
@@ -83,7 +83,7 @@ Type=simple
 User=$USER
 WorkingDirectory=$HOME/Neighborhood_BBS
 Environment="PATH=$HOME/Neighborhood_BBS/venv/bin"
-ExecStart=$HOME/Neighborhood_BBS/venv/bin/python src/main.py
+ExecStart=$HOME/Neighborhood_BBS/venv/bin/python server/src/main.py
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal

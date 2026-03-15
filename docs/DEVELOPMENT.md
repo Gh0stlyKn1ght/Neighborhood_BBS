@@ -57,7 +57,7 @@ pip install -r requirements-dev.txt
 Create `.env` file:
 
 ```env
-FLASK_APP=src/server.py
+FLASK_APP=server/src/main.py
 FLASK_ENV=development
 DEBUG=true
 SECRET_KEY=dev-secret-key
@@ -114,7 +114,7 @@ Server runs on `http://localhost:8080`
 
 ```bash
 # Create/initialize database
-python scripts/init_db.py
+python server/scripts/init_db.py
 
 # Run migrations
 python scripts/migrate.py
