@@ -57,6 +57,11 @@ def main():
     db.init_db()
     init_default_rooms()
     
+    # Initialize setup config table
+    logger.info("Initializing setup configuration...")
+    from setup_config import SetupConfig
+    SetupConfig.init_setup_table()
+    
     # Create Flask app
     app = create_app()
     

@@ -2,7 +2,7 @@
 Flask application factory and configuration
 """
 
-from flask import Flask, render_template, send_from_directory, request, jsonify
+from flask import Flask, render_template, send_from_directory, request, jsonify, redirect
 from flask_socketio import SocketIO
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -63,10 +63,47 @@ def create_app(config_file=None):
     from chat.routes import chat_bp
     from board.routes import board_bp
     from admin.routes import admin_bp
+    from setup.routes import setup_bp
 
     app.register_blueprint(chat_bp)
     app.register_blueprint(board_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(setup_bp)
+    
+    # Setup check middleware
+    @app.before_request
+    def check_setup_required():
+        """Redirect to setup if not complete"""
+        from setup_config import SetupConfig
+        
+        # Allow these paths without setup
+        allowed_paths = [
+            '/api/setup',
+            '/setup',
+            '/static',
+            '/api/health'
+        ]
+        
+        # Check if path is allowed without setup
+        for allowed in allowed_paths:
+            if request.path.startswith(allowed):
+                return
+        
+        # Check if setup is complete
+        if not SetupConfig.is_setup_complete():
+            return redirect('/setup')
+    
+    # Route to setup wizard page
+    @app.route('/setup')
+    def setup_page():
+        """Serve setup wizard"""
+        from setup_config import SetupConfig
+        
+        # If setup is already complete, redirect to home
+        if SetupConfig.is_setup_complete():
+            return redirect('/')
+        
+        return render_template('setup-wizard.html')
 
     # Middleware for device ban checking
     @app.before_request

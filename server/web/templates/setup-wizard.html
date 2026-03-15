@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEIGHBORHOOD BBS - SETUP WIZARD</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #00ff41;
+            --dark: #000000;
+            --dim: #007a1e;
+            --bright: #00ff41;
+            --danger: #ff0000;
+        }
+        
+        html, body {
+            background: var(--dark);
+            color: var(--primary);
+            font-family: 'Courier Prime', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        /* CRT MONITOR EFFECTS */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15) 0,
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 9999;
+            animation: scanlines 8s linear infinite;
+        }
+        
+        @keyframes scanlines {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(10px); }
+        }
+        
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.4) 100%);
+            pointer-events: none;
+            z-index: 9998;
+        }
+        
+        .terminal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            z-index: 1;
+        }
+        
+        .screen {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+            filter: brightness(1.1);
+        }
+        
+        .screen::selection {
+            background: var(--dim);
+            color: var(--primary);
+        }
+        
+        .wizard-header {
+            border: 2px solid var(--primary);
+            border-bottom: 4px double var(--dim);
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3), inset 0 0 10px rgba(0, 255, 65, 0.1);
+            text-align: center;
+        }
+        
+        .wizard-title {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            color: var(--primary);
+            text-shadow: 0 0 15px rgba(0, 255, 65, 0.8);
+        }
+        
+        .step-indicator {
+            font-size: 10px;
+            color: var(--dim);
+            margin-top: 8px;
+            letter-spacing: 1px;
+        }
+        
+        .step-indicator span {
+            color: var(--primary);
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+        }
+        
+        .wizard-content {
+            margin-bottom: 20px;
+        }
+        
+        .step-container {
+            display: none;
+        }
+        
+        .step-container.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+            border-bottom: 1px solid var(--dim);
+            padding-bottom: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+            padding: 10px;
+            border: 1px solid var(--dim);
+            background: rgba(0, 255, 65, 0.02);
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        input[type="text"],
+        input[type="password"],
+        input[type="email"] {
+            width: 100%;
+            padding: 8px;
+            background: var(--dark);
+            color: var(--primary);
+            border: 1px solid var(--dim);
+            font-family: 'Courier Prime', monospace;
+            font-size: 12px;
+            box-shadow: inset 0 0 5px rgba(0, 255, 65, 0.1);
+            transition: all 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="email"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: inset 0 0 5px rgba(0, 255, 65, 0.3), 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+        
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .radio-option {
+            padding: 12px;
+            border: 1px solid var(--dim);
+            background: rgba(0, 255, 65, 0.02);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .radio-option:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+        
+        .radio-option input[type="radio"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        
+        .radio-option input[type="radio"]:checked ~ .option-content {
+            color: var(--primary);
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+        }
+        
+        .radio-option.selected {
+            border-color: var(--primary);
+            background: rgba(0, 255, 65, 0.1);
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+        }
+        
+        .option-label {
+            font-weight: bold;
+            color: var(--primary);
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .option-description {
+            font-size: 11px;
+            color: var(--dim);
+            margin-bottom: 6px;
+        }
+        
+        .option-details {
+            font-size: 10px;
+            margin-left: 20px;
+            margin-top: 6px;
+            color: var(--dim);
+        }
+        
+        .option-details li {
+            margin-left: 16px;
+            margin-bottom: 2px;
+        }
+        
+        .recommended-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            background: var(--dim);
+            color: var(--primary);
+            font-size: 9px;
+            margin-left: 8px;
+            font-weight: bold;
+            text-shadow: 0 0 3px rgba(0, 255, 65, 0.5);
+        }
+        
+        .form-tip {
+            font-size: 10px;
+            color: var(--dim);
+            margin-top: 8px;
+            font-style: italic;
+            border-left: 2px solid var(--dim);
+            padding-left: 8px;
+        }
+        
+        .error-message {
+            color: var(--danger);
+            font-size: 11px;
+            margin-top: 8px;
+            padding: 8px;
+            border: 1px solid var(--danger);
+            background: rgba(255, 0, 0, 0.05);
+        }
+        
+        .success-message {
+            color: var(--primary);
+            font-size: 11px;
+            margin-top: 8px;
+            padding: 8px;
+            border: 1px solid var(--primary);
+            background: rgba(0, 255, 65, 0.05);
+        }
+        
+        .button-bar {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid var(--dim);
+            background: rgba(0, 255, 65, 0.02);
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: var(--dark);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            font-family: 'Courier Prime', monospace;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 5px rgba(0, 255, 65, 0.3);
+            text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.8);
+            transform: scale(1.05);
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        .button-secondary {
+            background: rgba(0, 255, 65, 0.1);
+            border-color: var(--dim);
+            color: var(--dim);
+            text-shadow: none;
+        }
+        
+        .button-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+            margin-left: 5px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="screen">
+            <div class="wizard-header">
+                <div class="wizard-title">⚙️ NEIGHBORHOOD BBS SETUP</div>
+                <div class="step-indicator">STEP <span id="current-step">1</span> OF <span>5</span> | INITIAL CONFIGURATION</div>
+            </div>
+            
+            <div class="wizard-content" id="wizard-content">
+                <!-- Steps will be dynamically loaded here -->
+            </div>
+            
+            <div class="button-bar">
+                <button id="btn-back" class="button-secondary" onclick="previousStep()" style="display: none;">← BACK</button>
+                <button id="btn-next" onclick="nextStep()">NEXT →</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentStep = 1;
+        const totalSteps = 5;
+        const formData = {};
+        
+        async function loadStep(step) {
+            try {
+                currentStep = step;
+                document.getElementById('current-step').textContent = step;
+                
+                // Update button visibility
+                document.getElementById('btn-back').style.display = step === 1 ? 'none' : 'block';
+                document.getElementById('btn-next').textContent = step === totalSteps ? 'COMPLETE SETUP' : 'NEXT →';
+                
+                // Fetch step data from API
+                const response = await fetch(`/api/setup/wizard/${step}`);
+                const data = await response.json();
+                
+                renderStep(data);
+            } catch (error) {
+                showError(`Failed to load step ${step}: ${error.message}`);
+            }
+        }
+        
+        function renderStep(stepData) {
+            const content = document.getElementById('wizard-content');
+            content.innerHTML = '';
+            
+            const container = document.createElement('div');
+            container.className = 'step-container active';
+            container.id = `step-${stepData.step}`;
+            
+            // Title
+            const title = document.createElement('div');
+            title.className = 'section-title';
+            title.textContent = stepData.title || '';
+            container.appendChild(title);
+            
+            // Description
+            if (stepData.description) {
+                const desc = document.createElement('div');
+                desc.style.cssText = 'margin-bottom: 16px; font-size: 11px; color: var(--dim);';
+                desc.textContent = stepData.description;
+                container.appendChild(desc);
+            }
+            
+            // Render fields
+            if (stepData.fields) {
+                stepData.fields.forEach(field => {
+                    if (field.type === 'password' || field.type === 'text' || field.type === 'email') {
+                        renderTextInput(field, container);
+                    } else if (field.type === 'radio') {
+                        renderRadioGroup(field, container);
+                    }
+                });
+            }
+            
+            // Tip
+            if (stepData.tip) {
+                const tip = document.createElement('div');
+                tip.className = 'form-tip';
+                tip.textContent = '💡 ' + stepData.tip;
+                container.appendChild(tip);
+            }
+            
+            content.appendChild(container);
+        }
+        
+        function renderTextInput(field, container) {
+            const group = document.createElement('div');
+            group.className = 'form-group';
+            
+            const label = document.createElement('label');
+            label.className = 'form-label';
+            label.textContent = field.label;
+            group.appendChild(label);
+            
+            const input = document.createElement('input');
+            input.type = field.type;
+            input.id = field.name;
+            input.placeholder = field.placeholder || '';
+            input.required = field.required;
+            input.onchange = () => {
+                formData[field.name] = input.value;
+            };
+            
+            // Restore previous value if exists
+            if (formData[field.name]) {
+                input.value = formData[field.name];
+            }
+            
+            group.appendChild(input);
+            container.appendChild(group);
+        }
+        
+        function renderRadioGroup(field, container) {
+            const group = document.createElement('div');
+            group.className = 'form-group';
+            
+            const label = document.createElement('label');
+            label.className = 'form-label';
+            label.textContent = field.label;
+            group.appendChild(label);
+            
+            const radioGroup = document.createElement('div');
+            radioGroup.className = 'radio-group';
+            
+            field.options.forEach(option => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'radio-option';
+                if (formData[field.name] === option.value) {
+                    optionDiv.classList.add('selected');
+                }
+                
+                const inputRadio = document.createElement('input');
+                inputRadio.type = 'radio';
+                inputRadio.name = field.name;
+                inputRadio.value = option.value;
+                inputRadio.onchange = () => {
+                    // Update all radio options' selected state
+                    document.querySelectorAll(`.radio-group [name="${field.name}"]`).forEach(r => {
+                        r.closest('.radio-option').classList.remove('selected');
+                    });
+                    optionDiv.classList.add('selected');
+                    formData[field.name] = option.value;
+                    
+                    // Show passcode field if needed
+                    if (option.requires_input === 'passcode') {
+                        showPasscodeInput(field.name);
+                    } else {
+                        const passcodeField = document.getElementById('passcode-input');
+                        if (passcodeField) {
+                            passcodeField.remove();
+                        }
+                    }
+                };
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'option-content';
+                
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'option-label';
+                labelDiv.innerHTML = option.label;
+                if (option.recommended) {
+                    labelDiv.innerHTML += ' <span class="recommended-badge">RECOMMENDED</span>';
+                }
+                contentDiv.appendChild(labelDiv);
+                
+                if (option.description) {
+                    const descDiv = document.createElement('div');
+                    descDiv.className = 'option-description';
+                    descDiv.textContent = option.description;
+                    contentDiv.appendChild(descDiv);
+                }
+                
+                if (option.pros || option.cons || option.tiers || option.why) {
+                    const detailsDiv = document.createElement('div');
+                    detailsDiv.className = 'option-details';
+                    
+                    if (option.why) {
+                        detailsDiv.innerHTML += `→ Why: ${option.why}<br>`;
+                    }
+                    
+                    if (option.tiers) {
+                        detailsDiv.innerHTML += '<strong>Tiers:</strong><ul>';
+                        option.tiers.forEach(t => {
+                            detailsDiv.innerHTML += `<li>${t}</li>`;
+                        });
+                        detailsDiv.innerHTML += '</ul>';
+                    }
+                    
+                    if (option.pros) {
+                        detailsDiv.innerHTML += '<strong>✓ Pros:</strong><ul>';
+                        option.pros.forEach(p => {
+                            detailsDiv.innerHTML += `<li>${p}</li>`;
+                        });
+                        detailsDiv.innerHTML += '</ul>';
+                    }
+                    
+                    if (option.cons) {
+                        detailsDiv.innerHTML += '<strong>✗ Cons:</strong><ul>';
+                        option.cons.forEach(c => {
+                            detailsDiv.innerHTML += `<li>${c}</li>`;
+                        });
+                        detailsDiv.innerHTML += '</ul>';
+                    }
+                    
+                    contentDiv.appendChild(detailsDiv);
+                }
+                
+                optionDiv.appendChild(inputRadio);
+                optionDiv.appendChild(contentDiv);
+                radioGroup.appendChild(optionDiv);
+            });
+            
+            group.appendChild(radioGroup);
+            container.appendChild(group);
+            
+            // Show passcode field if already selected
+            if (field.options.find(o => o.value === formData[field.name] && o.requires_input)) {
+                showPasscodeInput(field.name);
+            }
+        }
+        
+        function showPasscodeInput(fieldName) {
+            const containerr = document.querySelector('.wizard-content');
+            if (!document.getElementById('passcode-input')) {
+                const group = document.createElement('div');
+                group.id = 'passcode-input';
+                group.className = 'form-group';
+                
+                const label = document.createElement('label');
+                label.className = 'form-label';
+                label.textContent = 'Community Passcode';
+                group.appendChild(label);
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'passcode';
+                input.placeholder = 'Enter a passcode (4+ characters)';
+                input.onchange = () => {
+                    formData['passcode'] = input.value;
+                };
+                
+                if (formData['passcode']) {
+                    input.value = formData['passcode'];
+                }
+                
+                group.appendChild(input);
+                
+                const tip = document.createElement('div');
+                tip.className = 'form-tip';
+                tip.textContent = '💡 Share this with neighbors via SMS, QR code, or word-of-mouth';
+                group.appendChild(tip);
+                
+                containerr.appendChild(group);
+            }
+        }
+        
+        async function nextStep() {
+            try {
+                // Validate current step
+                if (!validateStep(currentStep)) {
+                    return;
+                }
+                
+                // Save current step
+                await saveStep(currentStep);
+                
+                // Move to next step
+                if (currentStep < totalSteps) {
+                    loadStep(currentStep + 1);
+                } else {
+                    // Complete setup
+                    await completeSetup();
+                }
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+        
+        function previousStep() {
+            if (currentStep > 1) {
+                loadStep(currentStep - 1);
+            }
+        }
+        
+        function validateStep(step) {
+            const step1 = () => {
+                const pwd = document.getElementById('admin_password')?.value?.trim();
+                const pwdConfirm = document.getElementById('admin_password_confirm')?.value?.trim();
+                
+                if (!pwd) {
+                    showError('Password is required');
+                    return false;
+                }
+                if (pwd !== pwdConfirm) {
+                    showError('Passwords do not match');
+                    return false;
+                }
+                if (pwd.length < 8) {
+                    showError('Password must be at least 8 characters');
+                    return false;
+                }
+                return true;
+            };
+            
+            const step2 = () => {
+                if (!formData['privacy_mode']) {
+                    showError('Please select a privacy mode');
+                    return false;
+                }
+                return true;
+            };
+            
+            const step3 = () => {
+                if (!formData['account_system']) {
+                    showError('Please select an account system');
+                    return false;
+                }
+                return true;
+            };
+            
+            const step4 = () => {
+                if (!formData['moderation_levels']) {
+                    showError('Please select a moderation strategy');
+                    return false;
+                }
+                return true;
+            };
+            
+            const step5 = () => {
+                if (!formData['access_control']) {
+                    showError('Please select an access control method');
+                    return false;
+                }
+                if (formData['access_control'] === 'passcode') {
+                    const passcode = document.getElementById('passcode')?.value?.trim();
+                    if (!passcode) {
+                        showError('Passcode is required');
+                        return false;
+                    }
+                    if (passcode.length < 4) {
+                        showError('Passcode must be at least 4 characters');
+                        return false;
+                    }
+                }
+                return true;
+            };
+            
+            const validators = [step1, step2, step3, step4, step5];
+            return validators[step - 1]();
+        }
+        
+        async function saveStep(step) {
+            const stepEndpoints = {
+                1: '/api/setup/wizard/1',
+                2: '/api/setup/wizard/2',
+                3: '/api/setup/wizard/3',
+                4: '/api/setup/wizard/4',
+                5: '/api/setup/wizard/5'
+            };
+            
+            const endpoint = stepEndpoints[step];
+            if (!endpoint) throw new Error('Invalid step');
+            
+            // Prepare data based on step
+            let data = {};
+            if (step === 1) {
+                data = {
+                    admin_password: document.getElementById('admin_password').value,
+                    admin_password_confirm: document.getElementById('admin_password_confirm').value
+                };
+            } else {
+                // Get appropriate field from formData
+                const fieldMap = {
+                    2: 'privacy_mode',
+                    3: 'account_system',
+                    4: 'moderation_levels',
+                    5: 'access_control'
+                };
+                const field = fieldMap[step];
+                data[field] = formData[field];
+                
+                if (step === 5 && formData['access_control'] === 'passcode') {
+                    data['passcode'] = document.getElementById('passcode').value;
+                }
+            }
+            
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to save step');
+            }
+            
+            return result;
+        }
+        
+        async function completeSetup() {
+            try {
+                const response = await fetch('/api/setup/wizard/complete', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to complete setup');
+                }
+                
+                // Show success and redirect
+                document.getElementById('wizard-content').innerHTML = `
+                    <div class="success-message">
+                        <strong>✓ SETUP COMPLETE!</strong><br><br>
+                        Your Neighborhood BBS is now configured.<br>
+                        Redirecting to admin dashboard...<br>
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    window.location.href = '/admin';
+                }, 2000);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+        
+        function showError(message) {
+            const content = document.getElementById('wizard-content');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = '✗ ' + message;
+            
+            // Find or create error container
+            let errorContainer = content.querySelector('.error-message');
+            if (errorContainer) {
+                errorContainer.remove();
+            }
+            
+            content.insertBefore(errorDiv, content.firstChild);
+        }
+        
+        // Load first step on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStep(1);
+        });
+    </script>
+</body>
+</html>
