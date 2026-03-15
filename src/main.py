@@ -8,6 +8,7 @@ from models import db, ChatRoom
 import logging
 from pathlib import Path
 import sys
+import argparse
 
 # Setup logging
 logging.basicConfig(
@@ -37,6 +38,13 @@ def init_default_rooms():
 
 def main():
     """Main entry point for the application"""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Neighborhood BBS')
+    parser.add_argument('--host', default=None, help='Host to bind to (default: from .env)')
+    parser.add_argument('--port', type=int, default=None, help='Port to listen on (default: from .env)')
+    parser.add_argument('--no-debug', action='store_true', help='Disable debug mode')
+    args = parser.parse_args()
+    
     logger.info("Starting Neighborhood BBS...")
     
     # Initialize database
@@ -47,10 +55,10 @@ def main():
     # Create Flask app
     app = create_app()
     
-    # Get configuration
-    host = app.config.get('HOST', '0.0.0.0')
-    port = app.config.get('PORT', 8080)
-    debug = app.config.get('DEBUG', False)
+    # Get configuration (CLI args override config file)
+    host = args.host or app.config.get('HOST', '127.0.0.1')
+    port = args.port or app.config.get('PORT', 8080)
+    debug = not args.no_debug and app.config.get('DEBUG', True)
     
     logger.info(f"Server running on {host}:{port}")
     logger.info(f"Debug mode: {debug}")
