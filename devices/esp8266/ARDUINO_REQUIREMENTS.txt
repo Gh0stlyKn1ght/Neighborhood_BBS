@@ -1,0 +1,44 @@
+================================================================================
+NEIGHBORHOOD BBS - ARDUINO LIBRARY REQUIREMENTS
+================================================================================
+
+REQUIRED LIBRARIES (Install via Arduino IDE Library Manager):
+
+1. WebSockets
+   - Author: Markus Sattler
+   - Minimum Version: 2.4.0
+   - Installation: Sketch → Include Library → Manage Libraries → Search "WebSockets" → Install
+   - Purpose: Real-time WebSocket server for chat communication
+   - GitHub: https://github.com/Links2004/arduinoWebsockets
+
+2. ArduinoJson
+   - Author: Benoit Blanchon
+   - Minimum Version: 6.19.0 (7.0+ recommended)
+   - Installation: Sketch → Include Library → Manage Libraries → Search "ArduinoJson" → Install
+   - Purpose: JSON serialization/deserialization for message protocol
+   - GitHub: https://github.com/bblanchon/ArduinoJson
+
+BUILT-IN LIBRARIES (No installation needed):
+
+- ESP8266WiFi (WiFi access point mode)
+- ESP8266WebServer (HTTP server for captive portal)
+- DNSServer (DNS redirection for portal)
+
+HARDWARE:
+
+- Board: NodeMCU 1.0 (ESP-12E Module)
+- Upload Speed: 115200 baud
+- Flash Size: 4M
+- CPU Frequency: 80 MHz
+
+BOARD SETUP:
+
+1. Add Board URL: http://arduino.esp8266.com/stable/package_esp8266com_index.json
+2. Install: "esp8266 by ESP8266 Community" (v3.1.2+)
+
+If you get compilation errors about missing headers:
+→ Check that WebSockets and ArduinoJson are INSTALLED in Library Manager
+→ Restart Arduino IDE after installing libraries
+→ Verify headers appear in syntax highlighting
+
+For detailed setup instructions, see: ARDUINO_SETUP.md

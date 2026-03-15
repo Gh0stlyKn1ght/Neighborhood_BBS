@@ -30,18 +30,25 @@ This folder contains platform-specific deployments of the Neighborhood BBS syste
 
 **Setup**:
 ```bash
-cd esp8266/libs
-# See ARDUINO_SETUP.md for complete instructions
-# 1. Install Arduino IDE
-# 2. Add ESP8266 board package
-# 3. Install WebSockets library (Markus Sattler v2.3.6+)
-# 4. Upload neighborhood_bbs_chat_filter.ino
-# 5. Done! Connect phone to "NEIGHBORHOOD_BBS" SSID
+cd esp8266/
+# Quick library reference:
+cat ARDUINO_REQUIREMENTS.txt
+
+# Detailed setup instructions:
+# 1. See esp8266/libs/ARDUINO_SETUP.md for complete steps
+# 2. Install Arduino IDE
+# 3. Add ESP8266 board package
+# 4. Install required libraries:
+#    - WebSockets by Markus Sattler (v2.4.0+)
+#    - ArduinoJson by Benoit Blanchon (v6.19.0+)
+# 5. Upload neighborhood_bbs_chat.ino
+# 6. Done! Connect phone to "NEIGHBORHOOD_BBS" SSID
 ```
 
 **Key files**:
-- `libs/neighborhood_bbs_chat_filter.ino` - Complete Arduino sketch with chat room + bulletins
-- `libs/ARDUINO_SETUP.md` - Step-by-step Arduino IDE guide ← START HERE
+- `ARDUINO_REQUIREMENTS.txt` - Library checklist (read first!)
+- `libs/neighborhood_bbs_chat.ino` - Complete Arduino sketch with chat + bulletins
+- `libs/ARDUINO_SETUP.md` - Step-by-step Arduino IDE guide ← DETAILED SETUP
 - `libs/WEBSOCKET_SETUP.md` - Optional MicroPython WebSocket implementation
 - `docs/README.md` - Firmware and deployment details
 
