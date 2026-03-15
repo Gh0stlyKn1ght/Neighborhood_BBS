@@ -1,11 +1,4 @@
-```
-█████╗ ███████╗██╗ █████╗ ███████╗╗ █████╗ ███═██╗███████╗███████╗██╗
-██╔═══╝██╔════╝██║██╔══██╗██╔════╝██╔══██║██║ ██║██╔═════╝██╚════╗██║
-████╗ █████╗  ██║███████║█████╗  ████████║██║ ██║█████╗  ███████║██║
-██║ ██║██╔══╝  ██║██╔══██║██╔══╝  ██╔══██║██║ ██║██╔══╝  ╚════██║╚═╝
-███████║███████╗██║██║  ██║███████╗██║  ██║╚█████╔╝███████╗███████║██╗
-╚══════╝╚══════╝╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝ ╚════╝ ╚══════╝╚══════╝╚═╝
-```
+# Neighborhood BBS
 
 <!-- Badges -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -19,14 +12,6 @@
 ## 📋 Overview
 
 **Neighborhood BBS** is a fully open-source, decentralized community board and real-time chatroom platform designed to run on affordable, low-power hardware like the **Raspberry Pi**, **Zima Board**, and **ESP8266**. Create a local neighborhood network where residents can share information, ask questions, organize events, and build community connections—all while keeping data local and secure.
-
-```
-    ┌─────────────────────────────────────┐
-    │   🏘️  NEIGHBORHOOD COMMUNICATION  🏘️   │
-    │  Connect Your Community Offline     │
-    │   All Data Stays Local & Secure     │
-    └─────────────────────────────────────┘
-```
 
 **Perfect for:**
 - 🏘️ **Neighborhoods** - Local community communication
@@ -60,18 +45,12 @@ All platforms share the **same retro aesthetic**:
 
 Access from any device: **http://raspberrypi.local:8080** (or your device's IP)
 
-```
-╔═══════════════════════════════════════════════════════════╗
-║           COMPATIBLE HARDWARE PLATFORMS                  ║
-╠════════════════════╦════════════╦════╦══════╦════════════╣
-║  Device            ║  Status    ║Cost║Power ║ Setup Time ║
-╠════════════════════╬════════════╬════╬══════╬════════════╣
-║ Raspberry Pi 4/5   ║ ✅ FULL    ║ $$ ║ 5W  ║  30 min   ║
-║ Zima Board         ║ ✅ FULL    ║$$$$ ║ 12W ║  30 min   ║
-║ ESP8266            ║ ✅ ACTIVE  ║  $ ║<100mA║ 1-2 hrs  ║
-║ ESP32              ║ 🔄 WIP     ║ $$ ║50-100mA║ 1-2 hrs ║
-╚════════════════════╩════════════╩════╩══════╩════════════╝
-```
+| Device | Status | Cost | Power | Setup |
+|--------|--------|------|-------|-------|
+| **Raspberry Pi 4/5** | ✅ Full Support | $$ | 5W | 30 min |
+| **Zima Board** | ✅ Fully Supported | $$$$ | 12W | 30 min |
+| **ESP8266** | ✅ Supported | $ | <100mA | 1-2 hrs |
+| **ESP32** | 🔄 In Progress | $$ | 50-100mA | 1-2 hrs |
 
 ### Quick Start by Device
 
@@ -92,16 +71,6 @@ See [docs/SETUP.md](docs/SETUP.md)
 See [firmware/esp8266/README.md](firmware/esp8266/README.md)
 
 ## 🚀 Quick Start
-
-```
-   INITIALIZING NEIGHBORHOOD BBS v1.0
-   ═══════════════════════════════════
-   > Setting up your local community...
-   > Checking hardware configuration...
-   > Loading database...
-   > Starting server...
-   > Ready for connections!
-```
 
 ### Prerequisites
 
@@ -247,19 +216,11 @@ cd firmware/zima
 
 We welcome contributions! Please follow these steps:
 
-```
-╔════════════════════════════════════════╗
-║      CONTRIBUTING TO NEIGHBORHOOD BBS  ║
-╠════════════════════════════════════════╣
-║ 1. Fork the repository                 ║
-║ 2. Create feature branch               ║
-║ 3. Make your improvements              ║
-║ 4. Run tests (pytest)                  ║
-║ 5. Submit pull request                 ║
-║                                        ║
-║ All contributions appreciated! 🙏      ║
-╚════════════════════════════════════════╝
-```
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
@@ -279,25 +240,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 💬 Chat: Join our community discussions
 - 🐛 Issues: Report bugs on [GitHub Issues](https://github.com/yourusername/Neighborhood_BBS/issues)
 
----
-
-```
-╔═══════════════════════════════════════════════════════════╗
-║                                                           ║
-║  🏘️  NEIGHBORHOOD BBS - Community Connection Network  🏘️  ║
-║                                                           ║
-║      Where Neighbors Connect. Data Stays Local.          ║
-║           Forever Open Source. Always Free.              ║
-║                                                           ║
-║              ■ ■ ■ ■ ■ ONLINE ■ ■ ■ ■ ■               ║
-║                                                           ║
-║           Made with 💙 for local communities            ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
-```
-
 <div align="center">
 
+### 🏘️ Building Stronger Communities, One Network At A Time 🏘️
+
 **Neighborhood BBS** - *Where neighbors connect*
+
+Made with 💙 for local communities
 
 </div>
