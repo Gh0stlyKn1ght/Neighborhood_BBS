@@ -65,12 +65,14 @@ def create_app(config_file=None):
     from admin.routes import admin_bp
     from setup.routes import setup_bp
     from privacy.routes import privacy_bp
+    from user.routes import user_bp
 
     app.register_blueprint(chat_bp)
     app.register_blueprint(board_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(setup_bp)
     app.register_blueprint(privacy_bp)
+    app.register_blueprint(user_bp)
     
     # Setup check middleware
     @app.before_request
@@ -82,6 +84,7 @@ def create_app(config_file=None):
         allowed_paths = [
             '/api/setup',
             '/api/privacy',
+            '/api/user',
             '/setup',
             '/static',
             '/api/health'

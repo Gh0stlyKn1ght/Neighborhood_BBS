@@ -54,6 +54,20 @@ class Database:
             )
         ''')
         
+        # User sessions table (anonymous sessions)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT UNIQUE NOT NULL,
+                nickname TEXT NOT NULL,
+                connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                disconnected_at TIMESTAMP,
+                expires_at TIMESTAMP,
+                last_activity TIMESTAMP,
+                updated_at TIMESTAMP
+            )
+        ''')
+        
         # Chat messages table (supports privacy modes)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS messages (
