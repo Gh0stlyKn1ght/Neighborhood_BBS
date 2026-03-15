@@ -70,6 +70,7 @@ def create_app(config_file=None):
     from access.routes import access_bp
     from privacy_consent.routes import privacy_consent_bp
     from admin.audit.routes import audit_bp
+    from admin.analytics.routes import analytics_bp
 
     app.register_blueprint(chat_bp)
     app.register_blueprint(board_bp)
@@ -81,6 +82,7 @@ def create_app(config_file=None):
     app.register_blueprint(access_bp)
     app.register_blueprint(privacy_consent_bp)
     app.register_blueprint(audit_bp)
+    app.register_blueprint(analytics_bp)
     
     # Setup check middleware
     @app.before_request
