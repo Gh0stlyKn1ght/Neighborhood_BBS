@@ -265,6 +265,22 @@ header .subtitle {
 
 #activity-feed {
     min-height: 200px;
+    padding: 15px;
+    border: 1px solid var(--text-color);
+    background-color: var(--bg-color);
+    overflow-y: auto;
+    max-height: 300px;
+}
+
+.activity-item {
+    padding: 10px;
+    border-bottom: 1px dashed var(--text-color);
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
 }
 
 /* ── FOOTER ──────────────────────────────────── */
@@ -450,22 +466,6 @@ input:focus, textarea:focus, select:focus {
 
 .board-item:last-child {
     border-bottom: none;
-}
-
-/* ── FADE IN ANIMATION ───────────────────────── */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.fade-in {
-    animation: fadeIn 0.5s ease-in;
 }
 
 /* ── SCROLLBAR STYLING ───────────────────────── */

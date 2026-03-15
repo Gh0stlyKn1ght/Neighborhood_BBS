@@ -185,13 +185,21 @@ def init_database():
         )
     print("  ✓ default configuration")
     
-    # Add default theme
+    # Add default retro theme (IBM PC Blue on Black)
     cursor.execute('''
         INSERT OR IGNORE INTO themes 
         (name, primary_color, secondary_color, background_color, text_color, is_active)
         VALUES (?, ?, ?, ?, ?, 1)
-    ''', ('Default', '#3498db', '#2ecc71', '#1a1a1a', '#ffffff'))
-    print("  ✓ default theme")
+    ''', ('Retro Blue IBM', '#0055FF', '#0077FF', '#000000', '#0055FF'))
+    print("  ✓ retro blue IBM theme (default)")
+    
+    # Add additional theme option
+    cursor.execute('''
+        INSERT OR IGNORE INTO themes 
+        (name, primary_color, secondary_color, background_color, text_color, is_active)
+        VALUES (?, ?, ?, ?, ?, 0)
+    ''', ('Modern', '#3498db', '#2ecc71', '#1a1a1a', '#ffffff'))
+    print("  ✓ modern theme (optional)")
     
     conn.commit()
     conn.close()
