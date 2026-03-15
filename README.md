@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Neighborhood BBS Logo](web/static/images/logo.png)
+![Neighborhood BBS Logo](devices/zima/bbs/static/logo.svg)
 
 </div>
 
