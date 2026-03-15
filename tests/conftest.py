@@ -15,10 +15,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 def app():
     """Create and configure a test app."""
     from server import create_app
-    
+    from models import db
+
     app = create_app()
     app.config['TESTING'] = True
-    
+
+    # Initialize database for testing
+    db.init_db()
+
     return app
 
 

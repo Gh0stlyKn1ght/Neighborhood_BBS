@@ -7,6 +7,8 @@ from flask_socketio import emit, join_room, leave_room
 from datetime import datetime
 import logging
 from models import ChatRoom, Message
+from server import limiter
+from utils.helpers import sanitize_input
 
 logger = logging.getLogger(__name__)
 
@@ -25,16 +27,24 @@ def get_rooms():
 
 
 @chat_bp.route('/rooms', methods=['POST'])
+@limiter.limit("10/minute")
 def create_room():
     """Create a new chat room"""
     try:
         data = request.get_json()
         name = data.get('name')
         description = data.get('description', '')
-        
+
         if not name:
             return jsonify({'error': 'Room name required'}), 400
-        
+
+        # Sanitize inputs
+        name = sanitize_input(name, max_length=100)
+        description = sanitize_input(description, max_length=500)
+
+        if not name.strip():
+            return jsonify({'error': 'Room name cannot be empty'}), 400
+
         room_id = ChatRoom.create(name, description)
         if room_id:
             return jsonify({'status': 'ok', 'room_id': room_id}), 201
@@ -51,7 +61,11 @@ def get_chat_history(room_id):
     try:
         limit = request.args.get('limit', 50, type=int)
         offset = request.args.get('offset', 0, type=int)
-        
+
+        # Enforce limits
+        limit = min(limit, 100)
+        offset = max(offset, 0)
+
         messages = Message.get_by_room(room_id, limit=limit, offset=offset)
         return jsonify({'messages': messages}), 200
     except Exception as e:
@@ -60,6 +74,7 @@ def get_chat_history(room_id):
 
 
 @chat_bp.route('/send', methods=['POST'])
+@limiter.limit("30/minute")
 def send_message():
     """Send a message to a room"""
     try:
@@ -67,15 +82,19 @@ def send_message():
         room_id = data.get('room_id')
         author = data.get('author', 'Anonymous')
         content = data.get('content')
-        
+
         if not all([room_id, content]):
             return jsonify({'error': 'Missing required fields'}), 400
-        
-        if len(content) > 1000:
-            return jsonify({'error': 'Message too long'}), 400
-        
+
+        # Sanitize inputs
+        author = sanitize_input(author, max_length=100)
+        content = sanitize_input(content, max_length=1000)
+
+        if not content.strip():
+            return jsonify({'error': 'Message cannot be empty'}), 400
+
         message_id = Message.create(room_id, author, content)
-        
+
         return jsonify({
             'status': 'ok',
             'message_id': message_id,

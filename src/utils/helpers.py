@@ -22,9 +22,11 @@ def validate_email(email):
 
 
 def sanitize_input(text, max_length=1000):
-    """Sanitize user input"""
+    """Sanitize user input - remove HTML tags and limit length"""
     if not text:
         return ""
+    # Remove HTML tags (XSS prevention)
+    text = re.sub(r'<[^>]+>', '', text)
     # Remove extra whitespace
     text = ' '.join(text.split())
     # Limit length

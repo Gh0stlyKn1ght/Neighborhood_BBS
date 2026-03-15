@@ -4,10 +4,17 @@ Flask application factory and configuration
 
 from flask import Flask, render_template, send_from_directory
 from flask_socketio import SocketIO
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 from pathlib import Path
 
-socketio = SocketIO(cors_allowed_origins="*")
+# Configure CORS origins from environment
+cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:8080').split(',')
+cors_origins = [origin.strip() for origin in cors_origins if origin.strip()]
+
+socketio = SocketIO(cors_allowed_origins=cors_origins)
+limiter = Limiter(key_func=get_remote_address)
 
 
 def create_app(config_file=None):
@@ -44,22 +51,37 @@ def create_app(config_file=None):
     
     # Initialize extensions
     socketio.init_app(app)
-    
+    limiter.init_app(app)
+
     # Register blueprints
     from chat.routes import chat_bp
     from board.routes import board_bp
-    
+
     app.register_blueprint(chat_bp)
     app.register_blueprint(board_bp)
-    
+
+    # Security headers
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+        return response
+
     # Error handlers
     @app.errorhandler(404)
     def not_found(e):
         return {'error': 'Not found'}, 404
-    
+
     @app.errorhandler(500)
     def server_error(e):
         return {'error': 'Internal server error'}, 500
+
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+        return {'error': 'Rate limit exceeded'}, 429
     
     # Health check
     @app.route('/health')

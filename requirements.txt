@@ -26,3 +26,4 @@ pydantic==2.1.1
 # Security
 PyJWT==2.8.0
 cryptography==41.0.1
+Flask-Limiter==3.5.0

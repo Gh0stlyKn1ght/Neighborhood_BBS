@@ -59,7 +59,7 @@ def main():
     logger.info("=" * 50)
     
     # Start the server
-    socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
+    socketio.run(app, host=host, port=port, debug=debug)
 
 
 if __name__ == '__main__':

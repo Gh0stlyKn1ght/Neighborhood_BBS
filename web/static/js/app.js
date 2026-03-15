@@ -14,51 +14,88 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadRecentActivity() {
     try {
         const feed = document.getElementById('activity-feed');
-        
+
         // Fetch recent posts
         const postsResponse = await fetch(`${API_BASE}/board/posts?limit=5`);
         const postsData = await postsResponse.json();
-        
+
         // Fetch chat rooms
         const roomsResponse = await fetch(`${API_BASE}/chat/rooms`);
         const roomsData = await roomsResponse.json();
-        
-        let html = '';
-        
+
+        const fragment = document.createDocumentFragment();
+
         // Display recent posts
         if (postsData.posts && postsData.posts.length > 0) {
-            html += '<h3>Recent Posts</h3><div class="activity-list">';
+            const postsHeading = document.createElement('h3');
+            postsHeading.textContent = 'Recent Posts';
+            fragment.appendChild(postsHeading);
+
+            const postsList = document.createElement('div');
+            postsList.className = 'activity-list';
+
             postsData.posts.forEach(post => {
-                html += `
-                    <div class="activity-item">
-                        <strong>${post.title}</strong>
-                        <em>by ${post.author}</em>
-                        <small>${formatDate(post.created_at)}</small>
-                    </div>
-                `;
+                const item = document.createElement('div');
+                item.className = 'activity-item';
+
+                const title = document.createElement('strong');
+                title.textContent = post.title;
+
+                const author = document.createElement('em');
+                author.textContent = 'by ' + post.author;
+
+                const date = document.createElement('small');
+                date.textContent = formatDate(post.created_at);
+
+                item.appendChild(title);
+                item.appendChild(author);
+                item.appendChild(date);
+                postsList.appendChild(item);
             });
-            html += '</div>';
+
+            fragment.appendChild(postsList);
         }
-        
+
         // Display active rooms
         if (roomsData.rooms && roomsData.rooms.length > 0) {
-            html += '<h3 style="margin-top: 30px;">Active Chat Rooms</h3><div class="activity-list">';
+            const roomsHeading = document.createElement('h3');
+            roomsHeading.textContent = 'Active Chat Rooms';
+            roomsHeading.style.marginTop = '30px';
+            fragment.appendChild(roomsHeading);
+
+            const roomsList = document.createElement('div');
+            roomsList.className = 'activity-list';
+
             roomsData.rooms.forEach(room => {
-                html += `
-                    <div class="activity-item">
-                        <strong>${room.name}</strong>
-                        <small>${room.description || 'No description'}</small>
-                    </div>
-                `;
+                const item = document.createElement('div');
+                item.className = 'activity-item';
+
+                const name = document.createElement('strong');
+                name.textContent = room.name;
+
+                const desc = document.createElement('small');
+                desc.textContent = room.description || 'No description';
+
+                item.appendChild(name);
+                item.appendChild(desc);
+                roomsList.appendChild(item);
             });
-            html += '</div>';
+
+            fragment.appendChild(roomsList);
         }
-        
-        feed.innerHTML = html || '<p>No recent activity yet.</p>';
+
+        // Clear and append
+        feed.textContent = '';
+        if (fragment.childNodes.length > 0) {
+            feed.appendChild(fragment);
+        } else {
+            feed.textContent = 'No recent activity yet.';
+        }
     } catch (error) {
         console.error('Error loading activity:', error);
-        document.getElementById('activity-feed').innerHTML = 
-            '<p style="color: red;">Error loading activity. Please refresh.</p>';
+        const feed = document.getElementById('activity-feed');
+        feed.textContent = 'Error loading activity. Please refresh.';
+        feed.style.color = 'red';
     }
 }
 
