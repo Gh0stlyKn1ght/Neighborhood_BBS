@@ -1,0 +1,517 @@
+@baseUrl = http://localhost:8080
+@contentType = application/json
+
+###############################################################################
+# NEIGHBORHOOD BBS - API TEST FILE
+# 
+# Instructions:
+# 1. Install VS Code extension: REST Client (humao.rest-client)
+# 2. Start the server: python src/main.py
+# 3. Click "Send Request" above each test block to execute
+# 4. Results appear in the "Response" panel
+#
+# Test Coverage:
+# - Health checks
+# - Chat rooms (CRUD)
+# - Chat messages
+# - Board posts (CRUD)
+# - Post replies
+# - Error handling
+# - Rate limiting
+# - Input validation
+###############################################################################
+
+###############################################################################
+# HEALTH & STATUS TESTS
+###############################################################################
+
+### Health Check
+# Expected: 200 OK with {"status": "ok", "app": "Neighborhood BBS"}
+GET @baseUrl/health
+
+### Home Page
+# Expected: 200 OK with HTML content
+GET @baseUrl/
+
+### 404 Error Test
+# Expected: 404 Not found
+GET @baseUrl/nonexistent
+
+###############################################################################
+# CHAT ROOMS - GET OPERATIONS
+###############################################################################
+
+### Get All Chat Rooms
+# Expected: 200 OK with array of rooms
+GET @baseUrl/api/chat/rooms
+
+### Get Chat Rooms (with pagination - future feature)
+GET @baseUrl/api/chat/rooms?limit=5&offset=0
+
+###############################################################################
+# CHAT ROOMS - CREATE OPERATIONS
+###############################################################################
+
+### Create New Chat Room - Basic
+# Expected: 201 Created with room_id
+POST @baseUrl/api/chat/rooms
+Content-Type: @contentType
+
+{
+  "name": "neighborhood-general",
+  "description": "General discussion for the neighborhood"
+}
+
+### Create Chat Room - Minimal (no description)
+# Expected: 201 Created
+POST @baseUrl/api/chat/rooms
+Content-Type: @contentType
+
+{
+  "name": "lost-and-found"
+}
+
+### Create Chat Room - Missing Name (should fail)
+# Expected: 400 Bad Request with error message
+POST @baseUrl/api/chat/rooms
+Content-Type: @contentType
+
+{
+  "description": "No name provided"
+}
+
+### Create Chat Room - Empty Name (should fail)
+# Expected: 400 Bad Request
+POST @baseUrl/api/chat/rooms
+Content-Type: @contentType
+
+{
+  "name": "",
+  "description": "Empty name"
+}
+
+### Create Chat Room - With HTML Tags (XSS test)
+# Expected: 201 Created with HTML stripped
+POST @baseUrl/api/chat/rooms
+Content-Type: @contentType
+
+{
+  "name": "<script>alert('xss')</script>test-room",
+  "description": "<img src=x onerror=alert(1)>"
+}
+
+### Create Chat Room - Duplicate Name (should fail)
+# Expected: 409 Conflict - Room already exists
+POST @baseUrl/api/chat/rooms
+Content-Type: @contentType
+
+{
+  "name": "neighborhood-general",
+  "description": "Duplicate"
+}
+
+###############################################################################
+# CHAT MESSAGES - SEND
+###############################################################################
+
+### Send Message - Basic
+# Note: Replace room_id with actual ID from Get All Chat Rooms response
+# Expected: 201 OK with message_id
+POST @baseUrl/api/chat/send
+Content-Type: @contentType
+
+{
+  "room_id": 26,
+  "author": "Alice",
+  "content": "Hey neighbors! Anyone want to organize a cleanup?"
+}
+
+### Send Message - Without Author (uses Anonymous)
+# Expected: 201 OK
+POST @baseUrl/api/chat/send
+Content-Type: @contentType
+
+{
+  "room_id": 26,
+  "content": "Quick question about parking"
+}
+
+### Send Message - Without Content (should fail)
+# Expected: 400 Bad Request
+POST @baseUrl/api/chat/send
+Content-Type: @contentType
+
+{
+  "room_id": 26,
+  "author": "Bob"
+}
+
+### Send Message - With XSS Attempt
+# Expected: 201 OK with HTML tags stripped
+POST @baseUrl/api/chat/send
+Content-Type: @contentType
+
+{
+  "room_id": 26,
+  "author": "<script>alert(1)</script>Hacker",
+  "content": "Visit my site: <a href=javascript:alert(1)>click</a>"
+}
+
+### Send Message - Long Content (validates max length)
+# Expected: 201 OK (truncated to 1000 chars)
+POST @baseUrl/api/chat/send
+Content-Type: @contentType
+
+{
+  "room_id": 26,
+  "author": "LongMessage",
+  "content": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."
+}
+
+### Send Message - Empty Content (should fail)
+# Expected: 400 Bad Request
+POST @baseUrl/api/chat/send
+Content-Type: @contentType
+
+{
+  "room_id": 26,
+  "author": "Bob",
+  "content": ""
+}
+
+###############################################################################
+# CHAT HISTORY - RETRIEVE MESSAGES
+###############################################################################
+
+### Get Chat History for Room
+# Expected: 200 OK with array of messages
+GET @baseUrl/api/chat/history/26
+
+### Get Chat History - With Pagination (limit)
+# Expected: 200 OK with max 10 messages
+GET @baseUrl/api/chat/history/26?limit=10
+
+### Get Chat History - With Offset
+# Expected: 200 OK skipping first 5 messages
+GET @baseUrl/api/chat/history/26?limit=20&offset=5
+
+### Get Chat History - Limit Over Max (should cap at 100)
+# Expected: 200 OK with max 100 messages
+GET @baseUrl/api/chat/history/26?limit=500
+
+### Get Chat History - Negative Offset (should be corrected)
+# Expected: 200 OK starting from 0
+GET @baseUrl/api/chat/history/26?offset=-5
+
+###############################################################################
+# BOARD POSTS - GET OPERATIONS
+###############################################################################
+
+### Get All Board Posts
+# Expected: 200 OK with array of posts
+GET @baseUrl/api/board/posts
+
+### Get Board Posts - With Pagination
+GET @baseUrl/api/board/posts?limit=10&offset=0
+
+### Get Specific Post by ID
+# Note: Replace 1 with an actual post ID from Get All Board Posts
+GET @baseUrl/api/board/posts/1
+
+### Get Post That Doesn't Exist (should fail)
+# Expected: 404 Not Found
+GET @baseUrl/api/board/posts/99999
+
+###############################################################################
+# BOARD POSTS - CREATE OPERATIONS
+###############################################################################
+
+### Create Board Post - Basic
+# Expected: 201 Created with post_id
+POST @baseUrl/api/board/posts
+Content-Type: @contentType
+
+{
+  "title": "Community Cleanup This Saturday",
+  "content": "Let's organize a neighborhood cleanup at Central Park. Meet at 9 AM. Bring gloves and bags!",
+  "author": "Sarah",
+  "category": "events"
+}
+
+### Create Board Post - All Fields
+POST @baseUrl/api/board/posts
+Content-Type: @contentType
+
+{
+  "title": "Lost Cat - Orange Tabby",
+  "content": "Missing since Monday. Last seen near Oak Street. Very friendly. Please call 555-1234.",
+  "author": "John",
+  "category": "lost-and-found"
+}
+
+### Create Post - Marketplace
+POST @baseUrl/api/board/posts
+Content-Type: @contentType
+
+{
+  "title": "Selling Used Mountain Bike",
+  "content": "Trek mountain bike, 21-speed, good condition. $150 OBO.",
+  "author": "Mike",
+  "category": "marketplace"
+}
+
+### Create Post - Help Request
+POST @baseUrl/api/board/posts
+Content-Type: @contentType
+
+{
+  "title": "Need Recommendation for Plumber",
+  "content": "Looking for a reliable plumber in the area. Any recommendations?",
+  "author": "Patricia",
+  "category": "help"
+}
+
+### Create Post - Missing Title (should fail)
+# Expected: 400 Bad Request
+POST @baseUrl/api/board/posts
+Content-Type: @contentType
+
+{
+  "content": "No title provided",
+  "author": "Test"
+}
+
+### Create Post - Missing Content (should fail)
+# Expected: 400 Bad Request
+POST @baseUrl/api/board/posts
+Content-Type: @contentType
+
+{
+  "title": "No content",
+  "author": "Test"
+}
+
+### Create Post - Invalid Category (should default to general)
+# Expected: 201 Created with category=general
+POST @baseUrl/api/board/posts
+Content-Type: @contentType
+
+{
+  "title": "Invalid Category Test",
+  "content": "This post has an invalid category",
+  "author": "Test",
+  "category": "invalid-category"
+}
+
+### Create Post - With XSS Attempt
+# Expected: 201 Created with HTML stripped
+POST @baseUrl/api/board/posts
+Content-Type: @contentType
+
+{
+  "title": "<img src=x onerror=alert('xss')> Malicious Post",
+  "content": "<script>alert('attack')</script> Some content",
+  "author": "<script>Hacker</script>",
+  "category": "general"
+}
+
+###############################################################################
+# BOARD POSTS - UPDATE/DELETE OPERATIONS
+###############################################################################
+
+### Delete Board Post
+# Note: Replace 1 with actual post ID
+# Expected: 200 OK
+DELETE @baseUrl/api/board/posts/1
+
+### Delete Non-existent Post (should fail)
+# Expected: 500 (no validation yet) or error
+DELETE @baseUrl/api/board/posts/99999
+
+###############################################################################
+# BOARD POST REPLIES
+###############################################################################
+
+### Add Reply to Post
+# Note: Replace 1 with actual post ID
+# Expected: 201 Created with reply_id
+POST @baseUrl/api/board/posts/1/replies
+Content-Type: @contentType
+
+{
+  "author": "Bob",
+  "content": "I'm interested! What time should I arrive?"
+}
+
+### Add Reply - Missing Author (uses Anonymous)
+POST @baseUrl/api/board/posts/1/replies
+Content-Type: @contentType
+
+{
+  "content": "Great idea! Count me in."
+}
+
+### Add Reply - Missing Content (should fail)
+# Expected: 400 Bad Request
+POST @baseUrl/api/board/posts/1/replies
+Content-Type: @contentType
+
+{
+  "author": "Bob"
+}
+
+### Add Reply to Non-existent Post (should fail)
+# Expected: 404 Not Found
+POST @baseUrl/api/board/posts/99999/replies
+Content-Type: @contentType
+
+{
+  "author": "Bob",
+  "content": "Reply to ghost post"
+}
+
+### Add Reply - With XSS Attempt
+# Expected: 201 Created with HTML stripped
+POST @baseUrl/api/board/posts/1/replies
+Content-Type: @contentType
+
+{
+  "author": "<script>Evil</script>",
+  "content": "<img src=x onerror=alert('xss')> Check this out"
+}
+
+###############################################################################
+# ERROR HANDLING TESTS
+###############################################################################
+
+### Test 404 Error Handler
+GET @baseUrl/api/invalid/endpoint
+
+### Test Invalid JSON
+# Expected: 400 Bad Request
+POST @baseUrl/api/chat/send
+Content-Type: @contentType
+
+{
+  invalid json here
+}
+
+### Test Missing Content-Type
+# Expected: 400 Bad Request
+POST @baseUrl/api/chat/rooms
+
+{
+  "name": "test"
+}
+
+###############################################################################
+# SECURITY & VALIDATION TESTS
+###############################################################################
+
+### Test HTML Sanitization - Room Name
+POST @baseUrl/api/chat/rooms
+Content-Type: @contentType
+
+{
+  "name": "Test<script>alert(1)</script>Room"
+}
+
+### Test HTML Sanitization - Message Content
+POST @baseUrl/api/chat/send
+Content-Type: @contentType
+
+{
+  "room_id": 26,
+  "author": "Test",
+  "content": "Click <a href='javascript:alert(1)'>here</a>"
+}
+
+### Test HTML Sanitization - Post Title
+POST @baseUrl/api/board/posts
+Content-Type: @contentType
+
+{
+  "title": "<h1>Injected Title</h1>",
+  "content": "<svg onload=alert(1)>",
+  "author": "Test"
+}
+
+### Test Category Whitelisting
+# Valid categories: general, announcements, events, help, marketplace, lost-and-found
+POST @baseUrl/api/board/posts
+Content-Type: @contentType
+
+{
+  "title": "Test Categories",
+  "content": "Testing invalid category",
+  "author": "Test",
+  "category": "hacking"
+}
+
+###############################################################################
+# RATE LIMITING TESTS
+###############################################################################
+
+### Rate Limit Test - Send 1st Message
+# Send this multiple times rapidly to test rate limiting (30 req/min limit)
+POST @baseUrl/api/chat/send
+Content-Type: @contentType
+
+{
+  "room_id": 26,
+  "author": "RateLimitTest",
+  "content": "Message 1"
+}
+
+### Rate Limit Test - Create Room
+# Send this multiple times rapidly to test rate limiting (10 req/min limit)
+POST @baseUrl/api/chat/rooms
+Content-Type: @contentType
+
+{
+  "name": "rate-limit-test",
+  "description": "Testing rate limits"
+}
+
+###############################################################################
+# PAGINATION & PERFORMANCE TESTS
+###############################################################################
+
+### Test Large Limit Cap (should cap at 100)
+GET @baseUrl/api/board/posts?limit=1000
+
+### Test Offset Handling
+GET @baseUrl/api/board/posts?offset=10
+
+### Test Combined Limit and Offset
+GET @baseUrl/api/board/posts?limit=30&offset=20
+
+###############################################################################
+# NOTES & TIPS
+###############################################################################
+
+# REST Client Extension Tips:
+# 1. Use @baseUrl variable defined at top of file
+# 2. Comments start with # or //
+# 3. Use ### to separate test requests
+# 4. Click the "Send Request" link above each request
+# 5. Response appears in "Response" tab on the right
+# 6. Use Ctrl+Alt+L to format JSON
+# 7. Use Ctrl+Shift+D to duplicate request
+# 8. Environment variables can be defined with @ prefix
+
+# Expected Response Codes:
+# 200 - OK (successful GET, DELETE)
+# 201 - Created (successful POST)
+# 400 - Bad Request (validation errors)
+# 404 - Not Found (resource doesn't exist)
+# 409 - Conflict (duplicate room name)
+# 429 - Too Many Requests (rate limit exceeded)
+# 500 - Internal Server Error (unexpected error)
+
+# Testing Workflow:
+# 1. Start fresh database: rm data/neighborhood.db && python src/main.py
+# 2. Run this test file from top to bottom
+# 3. Monitor terminal output for logs
+# 4. Check response status and body
+# 5. Verify data in database: PRAGMA table_info(table_name);
