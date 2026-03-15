@@ -4,6 +4,7 @@ Utility functions for Neighborhood BBS
 
 import re
 from datetime import datetime
+import bleach
 
 
 def validate_username(username):
@@ -22,11 +23,15 @@ def validate_email(email):
 
 
 def sanitize_input(text, max_length=1000):
-    """Sanitize user input - remove HTML tags and limit length"""
+    """Sanitize user input - remove HTML tags and limit length (XSS prevention)
+    
+    Uses bleach library for robust HTML sanitization, superior to regex-based approach.
+    Removes all HTML tags and entities to prevent XSS attacks.
+    """
     if not text:
         return ""
-    # Remove HTML tags (XSS prevention)
-    text = re.sub(r'<[^>]+>', '', text)
+    # Use bleach for robust HTML sanitization (removes ALL HTML/entities safely)
+    text = bleach.clean(text, tags=[], strip=True)
     # Remove extra whitespace
     text = ' '.join(text.split())
     # Limit length

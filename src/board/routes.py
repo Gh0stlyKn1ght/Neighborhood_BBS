@@ -18,6 +18,7 @@ board_bp = Blueprint('board', __name__, url_prefix='/api/board')
 
 
 @board_bp.route('/posts', methods=['GET'])
+@limiter.limit("60/minute")
 def get_posts():
     """Get all board posts"""
     try:
@@ -69,6 +70,7 @@ def create_post():
 
 
 @board_bp.route('/posts/<int:post_id>', methods=['GET'])
+@limiter.limit("60/minute")
 def get_post(post_id):
     """Get a specific post"""
     try:

@@ -16,6 +16,7 @@ chat_bp = Blueprint('chat', __name__, url_prefix='/api/chat')
 
 
 @chat_bp.route('/rooms', methods=['GET'])
+@limiter.limit("60/minute")
 def get_rooms():
     """Get list of active chat rooms"""
     try:
@@ -56,6 +57,7 @@ def create_room():
 
 
 @chat_bp.route('/history/<int:room_id>', methods=['GET'])
+@limiter.limit("60/minute")
 def get_chat_history(room_id):
     """Get chat history for a room"""
     try:

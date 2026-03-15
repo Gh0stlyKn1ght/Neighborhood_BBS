@@ -6,6 +6,7 @@ from flask import Flask, render_template, send_from_directory
 from flask_socketio import SocketIO
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_secsrf import SeaSurf
 import os
 from pathlib import Path
 
@@ -15,6 +16,7 @@ cors_origins = [origin.strip() for origin in cors_origins if origin.strip()]
 
 socketio = SocketIO(cors_allowed_origins=cors_origins)
 limiter = Limiter(key_func=get_remote_address)
+csrf = SeaSurf()  # CSRF protection
 
 
 def create_app(config_file=None):
@@ -52,6 +54,7 @@ def create_app(config_file=None):
     # Initialize extensions
     socketio.init_app(app)
     limiter.init_app(app)
+    csrf.init_app(app)
 
     # Register blueprints
     from chat.routes import chat_bp
