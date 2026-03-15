@@ -124,6 +124,9 @@ def create_app(config_file=None):
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        # NOTE: 'unsafe-inline' is necessary for inline CSS animations and styles in retro terminal interface
+        # This is acceptable because: (1) All user input is sanitized with bleach, (2) No user content in style attrs
+        # For production with external CSS, use nonce-based CSP: "script-src 'nonce-{random}'"
         response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
         return response
 
