@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neighborhood BBS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏘️ Neighborhood BBS</h1>
+            <p class="subtitle">Community Board & Chatroom</p>
+        </header>
+
+        <nav class="navbar">
+            <ul>
+                <li><a href="/" class="nav-link active">Home</a></li>
+                <li><a href="/chat" class="nav-link">Chat</a></li>
+                <li><a href="/board" class="nav-link">Board</a></li>
+                <li><a href="/about" class="nav-link">About</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <section class="hero">
+                <h2>Welcome to Your Neighborhood</h2>
+                <p>Connect with your community, share information, and build stronger neighborhoods.</p>
+                
+                <div class="cta-buttons">
+                    <a href="/chat" class="btn btn-primary">💬 Go to Chat</a>
+                    <a href="/board" class="btn btn-secondary">📌 Visit Board</a>
+                </div>
+            </section>
+
+            <section class="features">
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">💬</div>
+                        <h3>Real-time Chat</h3>
+                        <p>Instant messaging with your neighbors</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📌</div>
+                        <h3>Community Board</h3>
+                        <p>Post announcements and ask questions</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔒</div>
+                        <h3>Privacy First</h3>
+                        <p>Keep data local and secure</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <h3>Low Power</h3>
+                        <p>Runs on ESP8266 and Zima Board</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="recent-activity">
+                <h2>Recent Activity</h2>
+                <div id="activity-feed">
+                    <p>Loading recent activity...</p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 Neighborhood BBS | <a href="https://github.com/Gh0stlyKn1ght/Neighborhood_BBS">GitHub</a></p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
