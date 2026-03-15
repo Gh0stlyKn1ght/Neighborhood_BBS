@@ -185,13 +185,13 @@ def init_database():
         )
     print("  ✓ default configuration")
     
-    # Add default retro theme (Cyan CRT Terminal)
+    # Add default retro theme (Green CRT Terminal - matching Arduino code)
     cursor.execute('''
         INSERT OR IGNORE INTO themes 
         (name, primary_color, secondary_color, background_color, text_color, is_active)
         VALUES (?, ?, ?, ?, ?, 1)
-    ''', ('Retro Cyan CRT', '#00FFFF', '#00FF99', '#000000', '#00FFFF'))
-    print("  ✓ retro cyan CRT terminal theme (default)")
+    ''', ('Retro Green CRT Terminal', '#00ff41', '#007a1e', '#000000', '#00ff41'))
+    print("  ✓ retro green CRT terminal theme (default)")
     
     # Add additional theme option
     cursor.execute('''

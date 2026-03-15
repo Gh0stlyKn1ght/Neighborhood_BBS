@@ -8,9 +8,9 @@
 }
 
 :root {
-    --primary-color: #00FFFF;
+    --primary-color: #00ff41;
     --bg-color: #000000;
-    --text-color: #00FFFF;
+    --text-color: #00ff41;
     --border-char: "█";
     --bg-dark: #000011;
 }
@@ -20,7 +20,7 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     line-height: 1.8;
-    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
 }
 
 .container {
@@ -37,7 +37,7 @@ header {
     text-align: center;
     border: 3px solid var(--text-color);
     margin: 20px 0;
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
     letter-spacing: 2px;
 }
 
@@ -76,7 +76,7 @@ header .subtitle {
     padding: 15px;
     border: 2px solid var(--text-color);
     margin-bottom: 20px;
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
 }
 
 .navbar ul {
@@ -103,7 +103,7 @@ header .subtitle {
 .nav-link.active {
     background-color: var(--text-color);
     color: var(--bg-color);
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
 }
 
 /* ── MAIN CONTENT ────────────────────────────── */
@@ -170,7 +170,7 @@ header .subtitle {
 .btn-secondary {
     background-color: var(--bg-color);
     color: var(--text-color);
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
 }
 
 .btn-secondary:hover {
