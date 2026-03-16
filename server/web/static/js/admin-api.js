@@ -248,6 +248,97 @@ class AdminApiClient {
     isAuthError(error) {
         return error.message && error.message.includes('Session expired');
     }
+    
+    // ========== ANALYTICS ==========
+    
+    /**
+     * Get complete dashboard summary
+     * 
+     * @returns {Promise<Object>} - Dashboard data with all metrics
+     */
+    async getDashboardSummary() {
+        const response = await this.request('/analytics/dashboard', {
+            method: 'GET'
+        });
+        return response.data;
+    }
+    
+    /**
+     * Get admin statistics
+     * 
+     * @param {number} days - Number of days for activity (default: 7)
+     * @returns {Promise<Object>} - Admin count and activity stats
+     */
+    async getAdminStats(days = 7) {
+        const response = await this.request(`/analytics/admins?days=${days}`, {
+            method: 'GET'
+        });
+        return response.data;
+    }
+    
+    /**
+     * Get moderation statistics
+     * 
+     * @param {number} days - Number of days for stats (default: 7)
+     * @returns {Promise<Object>} - Moderation statistics
+     */
+    async getModerationStats(days = 7) {
+        const response = await this.request(`/analytics/moderation?days=${days}`, {
+            method: 'GET'
+        });
+        return response.data;
+    }
+    
+    /**
+     * Get access control statistics
+     * 
+     * @returns {Promise<Object>} - Access and approval statistics
+     */
+    async getAccessStats() {
+        const response = await this.request('/analytics/access', {
+            method: 'GET'
+        });
+        return response.data;
+    }
+    
+    /**
+     * Get session statistics
+     * 
+     * @returns {Promise<Object>} - Session and connection stats
+     */
+    async getSessionStats() {
+        const response = await this.request('/analytics/sessions', {
+            method: 'GET'
+        });
+        return response.data;
+    }
+    
+    /**
+     * Get content creation statistics
+     * 
+     * @param {number} days - Number of days for stats (default: 7)
+     * @returns {Promise<Object>} - Message, post, and reply statistics
+     */
+    async getContentStats(days = 7) {
+        const response = await this.request(`/analytics/content?days=${days}`, {
+            method: 'GET'
+        });
+        return response.data;
+    }
+    
+    /**
+     * Get historical data for charts
+     * 
+     * @param {string} metric - 'messages', 'violations', 'sessions', 'admin_actions'
+     * @param {number} days - Number of days (default: 30)
+     * @returns {Promise<Object>} - Historical data array
+     */
+    async getHistoricalData(metric, days = 30) {
+        const response = await this.request(`/analytics/history?metric=${metric}&days=${days}`, {
+            method: 'GET'
+        });
+        return response.data;
+    }
 }
 
 // Create global instance

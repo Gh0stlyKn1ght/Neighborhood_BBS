@@ -1,302 +1,387 @@
 """
-Analytics Routes - PHASE 4 Week 12
+Analytics Routes - PHASE 4 Week 13
 
-REST API endpoints for dashboard analytics:
-- System health metrics
-- Community statistics
-- Message and filtering analytics
-- Trend analysis
+REST API endpoints for admin dashboard analytics:
+- Admin management statistics (count, activity, roles)
+- Moderation statistics (violations, suspensions, device bans)
+- Access control statistics (registrations, approvals)
+- Session statistics (active sessions, duration, peak times)
+- Content statistics (messages, posts, replies)
+- Historical data for charts
 
-All endpoints require X-Admin-Password header
-Rate-limited per endpoint
+All endpoints require Bearer token authentication
+Previously used privacy-first aggregate metrics (Week 12) at /api/admin/analytics
+New: Admin-specific analytics at /api/admin-management/analytics with token auth
 
 Author: AI Assistant
 Date: 2026
 """
 
 from flask import Blueprint, request, jsonify
-from functools import wraps
+from datetime import datetime, timedelta
 import logging
-import os
 
-from services.analytics_service import analytics_service
 from server import limiter
+from services.analytics_service import AnalyticsService
+from admin.admin_management import require_admin_token
 
 logger = logging.getLogger(__name__)
 
-analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/admin/analytics')
+analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/admin-management/analytics')
 
 
-def require_admin_auth(f):
-    """Decorator to check admin authentication"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        admin_password = request.headers.get('X-Admin-Password')
-        
-        if not admin_password:
-            return jsonify({'error': 'Missing admin password'}), 401
-        
-        # Compare with environment variable
-        expected_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
-        
-        if admin_password != expected_password:
-            return jsonify({'error': 'Invalid admin password'}), 401
-        
-        return f(*args, **kwargs)
-    return decorated_function
+# Initialize analytics service
+def get_analytics_service():
+    """Get analytics service instance"""
+    return AnalyticsService()
 
 
-@analytics_bp.route('/health', methods=['GET'])
-@limiter.limit("60 per minute")
-@require_admin_auth
-def get_system_health():
-    """
-    Get system health metrics
-    
-    Returns:
-    - Connected users count (real-time)
-    - Messages sent today
-    - Average message length
-    - Top filtered patterns
-    - Moderation statistics
-    """
-    try:
-        health = analytics_service.get_system_health()
-        
-        return jsonify({
-            'success': True,
-            'health': health
-        }), 200
-    
-    except Exception as e:
-        logger.error(f"Error getting system health: {e}")
-        return jsonify({'error': str(e)}), 500
-
+# ============================================================================
+# ANALYTICS ENDPOINTS
+# ============================================================================
 
 @analytics_bp.route('/dashboard', methods=['GET'])
-@limiter.limit("60 per minute")
-@require_admin_auth
-def get_dashboard():
+@require_admin_token
+@limiter.limit("30/minute")
+def get_dashboard_summary():
     """
-    Get comprehensive dashboard data
+    Get comprehensive dashboard summary with all statistics.
     
-    Includes:
-    - Current metrics summary
-    - Top filtered patterns
-    - Hourly message distribution
-    - 7-day user trend
-    - Moderation statistics
-    """
-    try:
-        dashboard_data = analytics_service.get_dashboard_data()
-        
-        return jsonify({
-            'success': True,
-            'dashboard': dashboard_data
-        }), 200
-    
-    except Exception as e:
-        logger.error(f"Error getting dashboard: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-@analytics_bp.route('/users/connected', methods=['GET'])
-@limiter.limit("60 per minute")
-@require_admin_auth
-def get_connected_users():
-    """Get current number of connected users"""
-    try:
-        count = analytics_service.get_connected_users_count()
-        
-        return jsonify({
-            'success': True,
-            'connected_users': count
-        }), 200
-    
-    except Exception as e:
-        logger.error(f"Error getting connected users: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-@analytics_bp.route('/messages/today', methods=['GET'])
-@limiter.limit("60 per minute")
-@require_admin_auth
-def get_messages_today():
-    """Get total messages sent today (aggregate only)"""
-    try:
-        count = analytics_service.get_messages_today_count()
-        avg_length = analytics_service.get_average_message_length()
-        
-        return jsonify({
-            'success': True,
-            'messages_today': count,
-            'average_length': avg_length
-        }), 200
-    
-    except Exception as e:
-        logger.error(f"Error getting messages today: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-@analytics_bp.route('/messages/distribution', methods=['GET'])
-@limiter.limit("30 per minute")
-@require_admin_auth
-def get_message_distribution():
-    """Get message distribution by hour for today"""
-    try:
-        hourly = analytics_service.get_messages_by_hour_today()
-        
-        return jsonify({
-            'success': True,
-            'hourly_distribution': hourly
-        }), 200
-    
-    except Exception as e:
-        logger.error(f"Error getting message distribution: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-@analytics_bp.route('/patterns/top', methods=['GET'])
-@limiter.limit("30 per minute")
-@require_admin_auth
-def get_top_patterns():
-    """
-    Get most frequently filtered patterns
-    
-    Query params:
-    - limit: Number of patterns to return (default 10, max 50)
-    """
-    try:
-        limit = min(int(request.args.get('limit', 10)), 50)
-        patterns = analytics_service.get_most_filtered_patterns(limit)
-        
-        return jsonify({
-            'success': True,
-            'patterns': patterns,
-            'limit': limit
-        }), 200
-    
-    except Exception as e:
-        logger.error(f"Error getting top patterns: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-@analytics_bp.route('/moderation/stats', methods=['GET'])
-@limiter.limit("30 per minute")
-@require_admin_auth
-def get_moderation_stats():
-    """
-    Get moderation statistics
+    Query parameters (optional):
+        - days: Number of days for activity stats (default: 7)
     
     Returns:
-    - Violations today (aggregate)
-    - Breakdown by severity
-    - Number of users affected (aggregate)
+    {
+        "status": "ok",
+        "data": {
+            "admins": {...},
+            "admin_activity": {...},
+            "moderation": {...},
+            "access_control": {...},
+            "sessions": {...},
+            "content": {...},
+            "generated_at": "2026-03-16T..."
+        }
+    }
     """
     try:
-        stats = analytics_service.get_moderation_stats()
+        service = get_analytics_service()
+        data = service.get_dashboard_summary()
         
         return jsonify({
-            'success': True,
-            'moderation': stats
+            'status': 'ok',
+            'data': data
         }), 200
     
     except Exception as e:
-        logger.error(f"Error getting moderation stats: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error generating dashboard summary: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': 'Failed to generate dashboard summary'
+        }), 500
 
 
-@analytics_bp.route('/trends/users', methods=['GET'])
-@limiter.limit("30 per minute")
-@require_admin_auth
-def get_user_trends():
+@analytics_bp.route('/admins', methods=['GET'])
+@require_admin_token
+@limiter.limit("30/minute")
+def get_admin_stats():
     """
-    Get active user trend over last N days
+    Get admin statistics: count, role distribution, and activity.
     
-    Query params:
-    - days: Number of days to include (default 7, max 30)
+    Query parameters (optional):
+        - days: Activity period in days (default: 7)
+    
+    Returns:
+    {
+        "status": "ok",
+        "data": {
+            "count": {
+                "total": int,
+                "active": int,
+                "inactive": int,
+                "by_role": {...}
+            },
+            "activity": {
+                "period_days": int,
+                "total_actions": int,
+                "by_admin": {...},
+                "by_action": {...},
+                "top_admins": [...]
+            }
+        }
+    }
     """
     try:
-        days = min(int(request.args.get('days', 7)), 30)
-        trend = analytics_service.get_active_users_trend(days)
+        service = get_analytics_service()
+        days = request.args.get('days', 7, type=int)
+        
+        data = {
+            'count': service.get_admin_count(),
+            'activity': service.get_admin_activity(days=days)
+        }
         
         return jsonify({
-            'success': True,
-            'trend': trend,
-            'period_days': days
+            'status': 'ok',
+            'data': data
         }), 200
     
     except Exception as e:
-        logger.error(f"Error getting user trends: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error getting admin stats: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': 'Failed to get admin statistics'
+        }), 500
 
 
-@analytics_bp.route('/report', methods=['GET'])
-@limiter.limit("20 per minute")
-@require_admin_auth
-def get_analytics_report():
+@analytics_bp.route('/moderation', methods=['GET'])
+@require_admin_token
+@limiter.limit("30/minute")
+def get_moderation_stats():
     """
-    Generate detailed analytics report
+    Get moderation statistics: violations, suspensions, device bans.
     
-    Query params:
-    - range: 'today', 'week', or 'month' (default 'today')
+    Query parameters (optional):
+        - days: Period in days (default: 7)
+    
+    Returns:
+    {
+        "status": "ok",
+        "data": {
+            "period_days": int,
+            "total_violations": int,
+            "violations_by_type": {...},
+            "resolved": int,
+            "unresolved": int,
+            "suspensions_active": int,
+            "device_bans_active": int,
+            "bans_new": int
+        }
+    }
     """
     try:
-        time_range = request.args.get('range', 'today')
+        service = get_analytics_service()
+        days = request.args.get('days', 7, type=int)
         
-        # Validate range
-        if time_range not in ['today', 'week', 'month']:
-            time_range = 'today'
-        
-        report = analytics_service.get_analytics_report(time_range)
+        data = service.get_moderation_stats(days=days)
         
         return jsonify({
-            'success': True,
-            'report': report
+            'status': 'ok',
+            'data': data
         }), 200
     
     except Exception as e:
-        logger.error(f"Error generating analytics report: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error getting moderation stats: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': 'Failed to get moderation statistics'
+        }), 500
 
 
-@analytics_bp.route('/info', methods=['GET'])
-@limiter.limit("60 per minute")
-@require_admin_auth
-def get_analytics_info():
-    """Get information about analytics system"""
-    return jsonify({
-        'success': True,
-        'analytics_system': {
-            'version': '1.0',
-            'purpose': 'Community health metrics (privacy-first)',
-            'philosophy': 'Aggregate metrics only - NO individual user tracking',
-            'metrics': [
-                'connected_users',
-                'messages_today',
-                'average_message_length',
-                'most_filtered_patterns',
-                'user_activity_trends',
-                'moderation_statistics'
-            ],
-            'forbidden': [
-                'individual_user_tracking',
-                'device_ids',
-                'personal_user_data',
-                'per_user_message_counts',
-                'user_identities'
-            ],
-            'endpoints': [
-                'GET /api/admin/analytics/health',
-                'GET /api/admin/analytics/dashboard',
-                'GET /api/admin/analytics/users/connected',
-                'GET /api/admin/analytics/messages/today',
-                'GET /api/admin/analytics/messages/distribution',
-                'GET /api/admin/analytics/patterns/top',
-                'GET /api/admin/analytics/moderation/stats',
-                'GET /api/admin/analytics/trends/users',
-                'GET /api/admin/analytics/report',
-                'GET /api/admin/analytics/info'
+@analytics_bp.route('/access', methods=['GET'])
+@require_admin_token
+@limiter.limit("30/minute")
+def get_access_control_stats():
+    """
+    Get access control statistics: registrations, approvals.
+    
+    Returns:
+    {
+        "status": "ok",
+        "data": {
+            "user_registrations": int,
+            "pending_approvals": int,
+            "approved_total": int,
+            "rejected": int,
+            "approval_rate": float,
+            "pending_by_days": {...}
+        }
+    }
+    """
+    try:
+        service = get_analytics_service()
+        data = service.get_access_stats()
+        
+        return jsonify({
+            'status': 'ok',
+            'data': data
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting access stats: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': 'Failed to get access control statistics'
+        }), 500
+
+
+@analytics_bp.route('/sessions', methods=['GET'])
+@require_admin_token
+@limiter.limit("30/minute")
+def get_session_stats():
+    """
+    Get session statistics: active sessions, session duration, peak times.
+    
+    Returns:
+    {
+        "status": "ok",
+        "data": {
+            "active_sessions": int,
+            "total_sessions_24h": int,
+            "total_sessions_7d": int,
+            "avg_session_duration_minutes": float,
+            "most_active_time": "HH:MM"
+        }
+    }
+    """
+    try:
+        service = get_analytics_service()
+        data = service.get_session_stats()
+        
+        return jsonify({
+            'status': 'ok',
+            'data': data
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting session stats: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': 'Failed to get session statistics'
+        }), 500
+
+
+@analytics_bp.route('/content', methods=['GET'])
+@require_admin_token
+@limiter.limit("30/minute")
+def get_content_stats():
+    """
+    Get content creation statistics: messages, posts, replies.
+    
+    Query parameters (optional):
+        - days: Period in days (default: 7)
+    
+    Returns:
+    {
+        "status": "ok",
+        "data": {
+            "period_days": int,
+            "messages": int,
+            "posts": int,
+            "replies": int,
+            "total_content": int,
+            "messages_per_day": float,
+            "posts_per_day": float
+        }
+    }
+    """
+    try:
+        service = get_analytics_service()
+        days = request.args.get('days', 7, type=int)
+        
+        data = service.get_content_stats(days=days)
+        
+        return jsonify({
+            'status': 'ok',
+            'data': data
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting content stats: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': 'Failed to get content statistics'
+        }), 500
+
+
+@analytics_bp.route('/history', methods=['GET'])
+@require_admin_token
+@limiter.limit("30/minute")
+def get_historical_data():
+    """
+    Get historical data for charts.
+    
+    Query parameters (required):
+        - metric: 'messages', 'violations', 'sessions', 'admin_actions'
+    
+    Query parameters (optional):
+        - days: Period in days (default: 30)
+    
+    Returns:
+    {
+        "status": "ok",
+        "data": {
+            "metric": str,
+            "period_days": int,
+            "data": [
+                {"date": "YYYY-MM-DD", "value": int},
+                ...
             ]
         }
-    }), 200
+    }
+    """
+    try:
+        service = get_analytics_service()
+        
+        metric = request.args.get('metric')
+        if not metric:
+            return jsonify({
+                'status': 'error',
+                'error': 'Missing required parameter: metric',
+                'allowed_metrics': ['messages', 'violations', 'sessions', 'admin_actions']
+            }), 400
+        
+        if metric not in ['messages', 'violations', 'sessions', 'admin_actions']:
+            return jsonify({
+                'status': 'error',
+                'error': f'Unknown metric: {metric}',
+                'allowed_metrics': ['messages', 'violations', 'sessions', 'admin_actions']
+            }), 400
+        
+        days = request.args.get('days', 30, type=int)
+        
+        # Validate days parameter
+        if days < 1 or days > 365:
+            return jsonify({
+                'status': 'error',
+                'error': 'Days must be between 1 and 365'
+            }), 400
+        
+        data = service.get_historical_data(metric=metric, days=days)
+        
+        return jsonify({
+            'status': 'ok',
+            'data': data
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting historical data: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': 'Failed to get historical data'
+        }), 500
+
+
+# ============================================================================
+# HEALTH CHECK
+# ============================================================================
+
+@analytics_bp.route('/health', methods=['GET'])
+@limiter.limit("60/minute")
+def analytics_health():
+    """Health check for analytics service (no auth required)"""
+    try:
+        service = get_analytics_service()
+        # Try a simple query to ensure database is accessible
+        admin_count = service.get_admin_count()
+        
+        return jsonify({
+            'status': 'ok',
+            'service': 'analytics'
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Analytics health check failed: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': 'Analytics service unavailable'
+        }), 500

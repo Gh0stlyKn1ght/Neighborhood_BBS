@@ -164,6 +164,9 @@ class AdminDashboard {
                 case 'audit':
                     await this.loadAuditLog();
                     break;
+                case 'analytics':
+                    await this.loadAnalytics();
+                    break;
             }
         } catch (e) {
             this.showError(`Error loading ${view}: ${adminApi.formatError(e)}`);
@@ -563,6 +566,163 @@ class AdminDashboard {
         `;
         
         container.innerHTML = html;
+    }
+    
+    // ========== ANALYTICS ==========
+    
+    /**
+     * Load analytics dashboard data
+     */
+    async loadAnalytics() {
+        if (!adminAuth.hasPermission('audit_log')) {
+            this.showError('You do not have permission to view analytics');
+            return;
+        }
+        
+        try {
+            this.showLoading('Loading analytics...');
+            const dashboard = await adminApi.getDashboardSummary();
+            this.renderAnalytics(dashboard);
+        } catch (e) {
+            this.showError(`Error loading analytics: ${adminApi.formatError(e)}`);
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    /**
+     * Render analytics dashboard
+     */
+    renderAnalytics(data) {
+        const container = document.getElementById('analyticsContainer');
+        if (!container) return;
+        
+        // Format numbers with commas
+        const fmt = (n) => n.toLocaleString();
+        
+        const admins = data.admins || {};
+        const activity = data.admin_activity || {};
+        const moderation = data.moderation || {};
+        const access = data.access_control || {};
+        const sessions = data.sessions || {};
+        const content = data.content || {};
+        
+        let html = `
+            <div class="analytics-grid">
+                <!-- Admin Statistics -->
+                <div class="analytics-card">
+                    <h3>Admin Statistics</h3>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="value">${fmt(admins.total || 0)}</div>
+                            <div class="label">Total Admins</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">${fmt(admins.active || 0)}</div>
+                            <div class="label">Active</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">${fmt(admins.inactive || 0)}</div>
+                            <div class="label">Inactive</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Admin Activity -->
+                <div class="analytics-card">
+                    <h3>Admin Activity (Last 7 Days)</h3>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="value">${fmt(activity.total_actions || 0)}</div>
+                            <div class="label">Total Actions</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">${Object.keys(activity.by_admin || {}).length}</div>
+                            <div class="label">Active Admins</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Moderation Statistics -->
+                <div class="analytics-card">
+                    <h3>Moderation (Last 7 Days)</h3>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="value">${fmt(moderation.total_violations || 0)}</div>
+                            <div class="label">Violations</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">${fmt(moderation.resolved || 0)}</div>
+                            <div class="label">Resolved</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">${fmt(moderation.device_bans_active || 0)}</div>
+                            <div class="label">Active Bans</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Access Control -->
+                <div class="analytics-card">
+                    <h3>Access Control</h3>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="value">${fmt(access.pending_approvals || 0)}</div>
+                            <div class="label">Pending Approvals</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">${access.approval_rate || 0}%</div>
+                            <div class="label">Approval Rate</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">${fmt(access.user_registrations || 0)}</div>
+                            <div class="label">Registrations</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Session Statistics -->
+                <div class="analytics-card">
+                    <h3>Session Statistics</h3>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="value">${fmt(sessions.active_sessions || 0)}</div>
+                            <div class="label">Active Sessions</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">${fmt(sessions.total_sessions_24h || 0)}</div>
+                            <div class="label">Last 24h</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">${(sessions.avg_session_duration_minutes || 0).toFixed(1)}m</div>
+                            <div class="label">Avg Duration</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Content Statistics -->
+                <div class="analytics-card">
+                    <h3>Content (Last 7 Days)</h3>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="value">${fmt(content.messages || 0)}</div>
+                            <div class="label">Messages</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">${fmt(content.posts || 0)}</div>
+                            <div class="label">Posts</div>
+                        </div>
+                        <div class="stat">
+                            <div class="value">${fmt(content.total_content || 0)}</div>
+                            <div class="label">Total</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        this.showSuccess('Analytics loaded');
     }
     
     // ========== UTILITIES ==========
