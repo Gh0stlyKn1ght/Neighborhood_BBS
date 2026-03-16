@@ -5,11 +5,13 @@ Week 8 Implementation
 """
 
 from flask import Blueprint, request, jsonify
+from functools import wraps
 from server import limiter
 from session_manager import SessionManager
 from services.passcode_access_service import get_passcode_service
 from services.approval_access_service import get_approval_service
 from admin_config import AdminConfig
+from setup_config import SetupConfig
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,6 +21,36 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 # Initialize services
 passcode_service = get_passcode_service()
 approval_service = get_approval_service()
+
+
+# Admin authentication decorator
+def require_admin_password(f):
+    """Decorator to require admin password authentication.
+    Checks X-Admin-Password header and verifies against stored admin password hash.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        admin_password = request.headers.get('X-Admin-Password')
+        
+        if not admin_password:
+            logger.warning(f"Admin endpoint called without password: {request.path}")
+            return jsonify({
+                'status': 'error',
+                'error': 'Admin authentication required',
+                'hint': 'Include X-Admin-Password header'
+            }), 401
+        
+        if not SetupConfig.verify_admin_password(admin_password):
+            logger.warning(f"Admin endpoint called with invalid password: {request.path}")
+            return jsonify({
+                'status': 'error',
+                'error': 'Invalid admin password',
+                'hint': 'Check X-Admin-Password header'
+            }), 403
+        
+        return f(*args, **kwargs)
+    
+    return decorated_function
 
 
 @auth_bp.route('/access-info', methods=['GET'])
@@ -482,9 +514,12 @@ def create_approved_session():
 
 @auth_bp.route('/admin/pending-requests', methods=['GET'])
 @limiter.limit("30/minute")
+@require_admin_password
 def admin_get_pending_requests():
     """
     Get pending approval requests (admin only).
+    
+    Requires: X-Admin-Password header with valid admin password
     
     Returns:
     - List of pending requests:
@@ -495,10 +530,9 @@ def admin_get_pending_requests():
     - Admin dashboard view of pending requests
     - Shows who's waiting and how long
     - Sorted by oldest first (FIFO)
-    - No rate limiting urgency
+    - Rate limited to 30/minute
     """
     try:
-        # TODO: Add admin auth check
         
         requests = approval_service.get_pending_requests()
         
@@ -515,9 +549,12 @@ def admin_get_pending_requests():
 
 @auth_bp.route('/admin/approve-user', methods=['POST'])
 @limiter.limit("10/minute")
+@require_admin_password
 def admin_approve_user():
     """
     Approve a user (admin action).
+    
+    Requires: X-Admin-Password header with valid admin password
     
     Request body:
     {
@@ -533,9 +570,9 @@ def admin_approve_user():
     - Update status to 'approved'
     - Record admin and timestamp
     - User can now join
+    - Rate limited to 10/minute
     """
     try:
-        # TODO: Add admin auth check
         
         data = request.get_json()
         nickname = data.get('nickname', '').strip()
@@ -568,9 +605,12 @@ def admin_approve_user():
 
 @auth_bp.route('/admin/reject-user', methods=['POST'])
 @limiter.limit("10/minute")
+@require_admin_password
 def admin_reject_user():
     """
     Reject a user's approval request (admin action).
+    
+    Requires: X-Admin-Password header with valid admin password
     
     Request body:
     {
@@ -587,9 +627,9 @@ def admin_reject_user():
     - Update status to 'rejected'
     - User can request again later
     - Record reason for audit
+    - Rate limited to 10/minute
     """
     try:
-        # TODO: Add admin auth check
         
         data = request.get_json()
         nickname = data.get('nickname', '').strip()
@@ -624,9 +664,12 @@ def admin_reject_user():
 
 @auth_bp.route('/admin/approval-history', methods=['GET'])
 @limiter.limit("30/minute")
+@require_admin_password
 def admin_get_approval_history():
     """
     Get approval history (approved and rejected users).
+    
+    Requires: X-Admin-Password header with valid admin password
     
     Returns:
     - List of approved/rejected users:
@@ -636,9 +679,9 @@ def admin_get_approval_history():
     - Audit trail of approvals/rejections
     - Sorted by newest first
     - Shows who approved/rejected
+    - Rate limited to 30/minute
     """
     try:
-        # TODO: Add admin auth check
         
         history = approval_service.get_approval_history()
         
@@ -655,9 +698,12 @@ def admin_get_approval_history():
 
 @auth_bp.route('/admin/approval-stats', methods=['GET'])
 @limiter.limit("30/minute")
+@require_admin_password
 def admin_get_approval_stats():
     """
     Get approval system statistics (admin dashboard).
+    
+    Requires: X-Admin-Password header with valid admin password
     
     Returns:
     - pending_count: Number waiting for approval
@@ -669,9 +715,10 @@ def admin_get_approval_stats():
     - Aggregated statistics only
     - Shows system health
     - Helps admin prioritize work
+    - Rate limited to 30/minute
     """
     try:
-        # TODO: Add admin auth check
+        # Admin authentication verified by decorator
         
         stats = approval_service.get_approval_statistics()
         

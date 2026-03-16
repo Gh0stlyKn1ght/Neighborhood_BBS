@@ -287,8 +287,52 @@ class SetupConfig:
             return {}
     
     @staticmethod
-    def verify_admin_password(password_hash):
-        """Verify if admin password is set"""
+    def verify_admin_password(provided_password):
+        """
+        Verify provided admin password against stored hash.
+        
+        Args:
+            provided_password: Plain text password from user
+            
+        Returns:
+            Boolean: True if password is correct, False otherwise
+        """
+        try:
+            if not provided_password:
+                return False
+            
+            db = Database()
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                'SELECT value FROM setup_config WHERE key = ?',
+                ('admin_password_hash',)
+            )
+            result = cursor.fetchone()
+            conn.close()
+            
+            if not result:
+                return False
+            
+            stored_hash = result[0]
+            
+            # Use werkzeug's check_password_hash for secure comparison
+            try:
+                from werkzeug.security import check_password_hash
+                return check_password_hash(stored_hash, provided_password)
+            except ImportError:
+                # Fallback if werkzeug not available
+                logger.warning("werkzeug not available, using basic comparison")
+                return provided_password == stored_hash
+                
+        except Exception as e:
+            logger.error(f"Error verifying admin password: {e}")
+            return False
+    
+    @staticmethod
+    def is_admin_password_set():
+        """Check if admin password has been configured"""
         try:
             db = Database()
             conn = db.get_connection()
@@ -303,7 +347,7 @@ class SetupConfig:
             
             return result is not None
         except Exception as e:
-            logger.error(f"Error verifying admin password: {e}")
+            logger.error(f"Error checking admin password: {e}")
             return False
     
     @staticmethod
