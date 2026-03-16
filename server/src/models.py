@@ -230,6 +230,39 @@ class Database:
             )
         ''')
         
+        # Admin bulletins/announcements table (PHASE 1 Week 4)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS bulletins (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                category TEXT DEFAULT 'general',
+                is_pinned BOOLEAN DEFAULT 0,
+                created_by TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP,
+                is_active BOOLEAN DEFAULT 1
+            )
+        ''')
+        
+        # Admin audit log table (for accountability - PHASE 4 Week 11)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                action TEXT NOT NULL,
+                action_category TEXT,
+                target_user TEXT,
+                target_type TEXT,
+                details TEXT,
+                admin_user TEXT NOT NULL,
+                admin_ip TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                status TEXT DEFAULT 'success',
+                notes TEXT
+            )
+        ''')
+        
         # Chat messages table (supports privacy modes)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS messages (
@@ -355,6 +388,15 @@ class Database:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_privacy_bulletins_active ON privacy_bulletins(is_active)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_privacy_consents_acknowledged ON privacy_consents(acknowledged_at)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_privacy_consents_session ON privacy_consents(session_id)')
+        # PHASE 1 Week 4 - Bulletins indexes
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_bulletins_active ON bulletins(is_active)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_bulletins_created ON bulletins(created_at)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_bulletins_pinned ON bulletins(is_pinned)')
+        # PHASE 4 Week 11 - Audit Log indexes
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log(timestamp)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_log_admin_user ON audit_log(admin_user)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_log_action_category ON audit_log(action_category)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_log_target_user ON audit_log(target_user)')
         
         conn.commit()
         conn.close()

@@ -20,7 +20,7 @@ import logging
 import os
 
 from services.analytics_service import analytics_service
-from rate_limiter import rate_limiter
+from server import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def require_admin_auth(f):
 
 
 @analytics_bp.route('/health', methods=['GET'])
-@rate_limiter.limit("60 per minute")
+@limiter.limit("60 per minute")
 @require_admin_auth
 def get_system_health():
     """
@@ -74,7 +74,7 @@ def get_system_health():
 
 
 @analytics_bp.route('/dashboard', methods=['GET'])
-@rate_limiter.limit("60 per minute")
+@limiter.limit("60 per minute")
 @require_admin_auth
 def get_dashboard():
     """
@@ -101,7 +101,7 @@ def get_dashboard():
 
 
 @analytics_bp.route('/users/connected', methods=['GET'])
-@rate_limiter.limit("60 per minute")
+@limiter.limit("60 per minute")
 @require_admin_auth
 def get_connected_users():
     """Get current number of connected users"""
@@ -119,7 +119,7 @@ def get_connected_users():
 
 
 @analytics_bp.route('/messages/today', methods=['GET'])
-@rate_limiter.limit("60 per minute")
+@limiter.limit("60 per minute")
 @require_admin_auth
 def get_messages_today():
     """Get total messages sent today (aggregate only)"""
@@ -139,7 +139,7 @@ def get_messages_today():
 
 
 @analytics_bp.route('/messages/distribution', methods=['GET'])
-@rate_limiter.limit("30 per minute")
+@limiter.limit("30 per minute")
 @require_admin_auth
 def get_message_distribution():
     """Get message distribution by hour for today"""
@@ -157,7 +157,7 @@ def get_message_distribution():
 
 
 @analytics_bp.route('/patterns/top', methods=['GET'])
-@rate_limiter.limit("30 per minute")
+@limiter.limit("30 per minute")
 @require_admin_auth
 def get_top_patterns():
     """
@@ -182,7 +182,7 @@ def get_top_patterns():
 
 
 @analytics_bp.route('/moderation/stats', methods=['GET'])
-@rate_limiter.limit("30 per minute")
+@limiter.limit("30 per minute")
 @require_admin_auth
 def get_moderation_stats():
     """
@@ -207,7 +207,7 @@ def get_moderation_stats():
 
 
 @analytics_bp.route('/trends/users', methods=['GET'])
-@rate_limiter.limit("30 per minute")
+@limiter.limit("30 per minute")
 @require_admin_auth
 def get_user_trends():
     """
@@ -232,7 +232,7 @@ def get_user_trends():
 
 
 @analytics_bp.route('/report', methods=['GET'])
-@rate_limiter.limit("20 per minute")
+@limiter.limit("20 per minute")
 @require_admin_auth
 def get_analytics_report():
     """
@@ -261,7 +261,7 @@ def get_analytics_report():
 
 
 @analytics_bp.route('/info', methods=['GET'])
-@rate_limiter.limit("60 per minute")
+@limiter.limit("60 per minute")
 @require_admin_auth
 def get_analytics_info():
     """Get information about analytics system"""

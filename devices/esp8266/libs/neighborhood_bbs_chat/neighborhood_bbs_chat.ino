@@ -351,229 +351,109 @@ button:hover {
 }
 
 String generateChatHTML() {
-  String html = R"(<!DOCTYPE html>
-<html><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IRC Chat - Neighborhood BBS</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  background: #000;
-  color: #00ff00;
-  font-family: 'Courier New', monospace;
-}
-body::before {
-  content: '';
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px);
-  pointer-events: none;
-  z-index: 999;
-}
-main {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  position: relative;
-  z-index: 1;
-}
-.titlebar {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px;
-  border: 1px solid #00ff00;
-  margin-bottom: 15px;
-}
-.titlebar button {
-  background: #00ff00;
-  color: #000;
-  border: 1px solid #00ff00;
-  padding: 6px 12px;
-  cursor: pointer;
-  font-family: 'Courier New', monospace;
-}
-.chat-log {
-  border: 2px solid #00ff00;
-  height: 60vh;
-  overflow-y: auto;
-  padding: 10px;
-  margin: 15px 0;
-  background: #000;
-  font-size: 12px;
-}
-.message {
-  margin: 5px 0;
-  line-height: 1.4;
-}
-.message-system {
-  color: #ffff00;
-  font-style: italic;
-}
-.message-handle {
-  color: #00ff00;
-  font-weight: bold;
-}
-.input-area {
-  border: 1px solid #00ff00;
-  padding: 15px;
-  background: rgba(0,255,0,0.02);
-}
-.nick-row {
-  display: flex;
-  gap: 5px;
-  margin-bottom: 10px;
-}
-.nick-row input {
-  flex: 1;
-  background: #001a00;
-  color: #00ff00;
-  border: 1px solid #00ff00;
-  padding: 8px;
-  font-family: 'Courier New', monospace;
-}
-.nick-row button {
-  background: #00ff00;
-  color: #000;
-  border: 1px solid #00ff00;
-  padding: 8px 16px;
-  cursor: pointer;
-  font-family: 'Courier New', monospace;
-  font-weight: bold;
-}
-.msg-row {
-  display: flex;
-  gap: 5px;
-}
-.msg-row textarea {
-  flex: 1;
-  background: #001a00;
-  color: #00ff00;
-  border: 1px solid #00ff00;
-  padding: 8px;
-  font-family: 'Courier New', monospace;
-  resize: none;
-  height: 60px;
-}
-.msg-row button {
-  background: #00ff00;
-  color: #000;
-  border: 1px solid #00ff00;
-  padding: 8px 16px;
-  cursor: pointer;
-  font-family: 'Courier New', monospace;
-  font-weight: bold;
-  align-self: flex-end;
-}
-.status {
-  margin-top: 10px;
-  font-size: 11px;
-  opacity: 0.7;
-}
-</style>
-</head><body>
-<main>
-<div class="titlebar">
-  <div><strong>◆ IRC CHAT ROOM ◆</strong></div>
-  <button onclick="location.href='/'">← BACK</button>
-</div>
-
-<div class="chat-log" id="messages"></div>
-
-<div class="input-area">
-  <div class="nick-row">
-    <input type="text" id="nick" placeholder="Your handle..." maxlength="16" autocomplete="off">
-    <button onclick="setNick()">SET</button>
-  </div>
-  <div class="msg-row">
-    <textarea id="msg" placeholder="Type message (240 max)..." maxlength="240"></textarea>
-    <button onclick="sendMsg()">SEND</button>
-  </div>
-  <div class="status">
-    <span id="status">🔴 Connecting...</span>
-  </div>
-</div>
-</main>
-
-<script>
-let ws = null;
-let nick = 'ANON_000';
-
-function connectWS() {
-  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.hostname;
-  ws = new WebSocket(proto + '//' + host + ':81');
-  
-  ws.onopen = () => {
-    updateStatus('🟢 Connected');
-    ws.send(JSON.stringify({type: 'nick_set', nick: nick}));
-  };
-  
-  ws.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    
-    if (data.type === 'history') {
-      document.getElementById('messages').innerHTML = '';
-      data.messages.forEach(msg => addMessage(msg));
-    } else if (data.type === 'msg') {
-      addMessage(data);
-    } else if (data.type === 'nick_ok') {
-      nick = data.nick;
-    }
-  };
-  
-  ws.onclose = () => {
-    updateStatus('🔴 Disconnected');
-    setTimeout(connectWS, 3000);
-  };
-}
-
-function setNick() {
-  const input = document.getElementById('nick');
-  const newNick = input.value.trim() || 'ANON_000';
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({type: 'nick_set', nick: newNick}));
-  }
-  input.value = '';
-}
-
-function sendMsg() {
-  const input = document.getElementById('msg');
-  const text = input.value.trim();
-  if (text && ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({type: 'msg', text: text}));
-    input.value = '';
-  }
-}
-
-function addMessage(msg) {
-  const div = document.getElementById('messages');
-  const el = document.createElement('div');
-  el.className = 'message' + (msg.system ? ' message-system' : '');
-  
-  if (msg.system) {
-    el.textContent = msg.text;
-  } else {
-    el.innerHTML = '<span class="message-handle">' + msg.handle + ':</span> ' + msg.text;
-  }
-  
-  div.appendChild(el);
-  div.scrollTop = div.scrollHeight;
-}
-
-function updateStatus(text) {
-  document.getElementById('status').textContent = text;
-}
-
-document.getElementById('msg').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && e.ctrlKey) sendMsg();
-});
-
-connectWS();
-</script>
-</body></html>)";
-  
+  String html = "<!DOCTYPE html><html><head>"
+    "<meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
+    "<title>IRC Chat - Neighborhood BBS</title>"
+    "<style>"
+    "* { margin:0; padding:0; box-sizing:border-box; }"
+    "body { background:#000; color:#00ff00; font-family:'Courier New',monospace; }"
+    "main { max-width:800px; margin:0 auto; padding:20px; }"
+    ".titlebar { display:flex; justify-content:space-between; padding:10px; border:1px solid #00ff00; margin-bottom:15px; }"
+    ".titlebar button { background:#00ff00; color:#000; border:none; padding:6px 12px; cursor:pointer; font-family:'Courier New',monospace; }"
+    ".chat-log { border:2px solid #00ff00; height:60vh; overflow-y:auto; padding:10px; margin:15px 0; background:#000; }"
+    ".message { margin:5px 0; line-height:1.4; }"
+    ".message-system { color:#ffff00; font-style:italic; }"
+    ".message-handle { color:#00ff00; font-weight:bold; }"
+    ".input-area { border:1px solid #00ff00; padding:15px; }"
+    ".nick-row { display:flex; gap:5px; margin-bottom:10px; }"
+    ".nick-row input { flex:1; background:#001a00; color:#00ff00; border:1px solid #00ff00; padding:8px; font-family:'Courier New',monospace; }"
+    ".nick-row button,.msg-row button { background:#00ff00; color:#000; border:none; padding:8px 16px; cursor:pointer; font-family:'Courier New',monospace; }"
+    ".msg-row { display:flex; gap:5px; }"
+    ".msg-row textarea { flex:1; background:#001a00; color:#00ff00; border:1px solid #00ff00; padding:8px; font-family:'Courier New',monospace; resize:none; height:60px; }"
+    ".status { margin-top:10px; font-size:11px; opacity:0.7; }"
+    "</style></head><body>"
+    "<main><div class=\"titlebar\"><div><strong>IRC CHAT ROOM</strong></div>"
+    "<button onclick=\"location.href='/'\">BACK</button></div>"
+    "<div class=\"chat-log\" id=\"messages\"></div><div class=\"input-area\">"
+    "<div class=\"nick-row\"><input type=\"text\" id=\"nick\" placeholder=\"Your handle...\" maxlength=\"16\">"
+    "<button onclick=\"setNick()\">SET</button></div>"
+    "<div class=\"msg-row\"><textarea id=\"msg\" placeholder=\"Type message (max 240)...\" maxlength=\"240\"></textarea>"
+    "<button onclick=\"sendMsg()\">SEND</button></div>"
+    "<div class=\"status\"><span id=\"status\">Connecting...</span></div></div></main>"
+    "<script>"
+    "let ws = null;"
+    "let myNick = 'ANON_000';"
+    "function connectWS() {"
+    "  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';"
+    "  ws = new WebSocket(proto + '//' + window.location.hostname + ':81');"
+    "  ws.onopen = function() {"
+    "    updateStatus('Connected');"
+    "    sendNick(myNick);"
+    "  };"
+    "  ws.onmessage = function(e) {"
+    "    const data = JSON.parse(e.data);"
+    "    if (data.type === 'history') {"
+    "      document.getElementById('messages').innerHTML = '';"
+    "      for (let i = 0; i < data.messages.length; i++) {"
+    "        addMessage(data.messages[i]);"
+    "      }"
+    "    } else if (data.type === 'msg') {"
+    "      addMessage(data);"
+    "    } else if (data.type === 'nick_ok') {"
+    "      myNick = data.nick;"
+    "      document.getElementById('nick').value = '';"
+    "    }"
+    "  };"
+    "  ws.onclose = function() {"
+    "    updateStatus('Disconnected');"
+    "    setTimeout(connectWS, 3000);"
+    "  };"
+    "}"
+    "function sendNick(nick) {"
+    "  if (ws && ws.readyState === WebSocket.OPEN) {"
+    "    ws.send(JSON.stringify({type: 'nick_set', nick: nick}));"
+    "  }"
+    "}"
+    "function setNick() {"
+    "  const input = document.getElementById('nick');"
+    "  const newNick = input.value.trim() || 'ANON_000';"
+    "  if (newNick.length > 16) return;"
+    "  if (ws && ws.readyState === WebSocket.OPEN) {"
+    "    sendNick(newNick);"
+    "  }"
+    "}"
+    "function sendMsg() {"
+    "  const input = document.getElementById('msg');"
+    "  const text = input.value.trim();"
+    "  if (text && text.length > 0 && ws && ws.readyState === WebSocket.OPEN) {"
+    "    ws.send(JSON.stringify({type: 'msg', text: text}));"
+    "    input.value = '';"
+    "  }"
+    "}"
+    "function addMessage(msg) {"
+    "  const div = document.getElementById('messages');"
+    "  const el = document.createElement('div');"
+    "  el.className = 'message' + (msg.system ? ' message-system' : '');"
+    "  if (msg.system) {"
+    "    el.textContent = msg.text;"
+    "  } else {"
+    "    const span = document.createElement('span');"
+    "    span.className = 'message-handle';"
+    "    span.textContent = msg.handle + ': ';"
+    "    el.appendChild(span);"
+    "    el.appendChild(document.createTextNode(msg.text));"
+    "  }"
+    "  div.appendChild(el);"
+    "  div.scrollTop = div.scrollHeight;"
+    "}"
+    "function updateStatus(text) {"
+    "  document.getElementById('status').textContent = text;"
+    "}"
+    "document.getElementById('msg').addEventListener('keydown', function(e) {"
+    "  if (e.key === 'Enter' && e.ctrlKey) sendMsg();"
+    "});"
+    "connectWS();"
+    "</script></body></html>";
   return html;
 }
 
@@ -586,11 +466,42 @@ void handleChat() {
 }
 
 void handleNotFound() {
-  handleRoot();  // Captive portal redirect
+  // Check if it's a captive portal detection request
+  String path = server.uri();
+  
+  // Portal detection endpoints - respond but also redirect to main page
+  if (path == "/generate_204") {
+    server.send(204);  // Android/Chrome detection
+    return;
+  }
+  if (path == "/ncsi.txt" || path == "/connecttest.txt") {
+    server.send(200, "text/plain", "Microsoft NCSI");  // Windows detection
+    return;
+  }
+  if (path.indexOf("apple") != -1 || path == "/hotspot-detect.html") {
+    // iOS/Apple detection - send success but browser will show this only briefly
+    server.send(200, "text/html", "<html><head><title>Success</title></head><body>Success</body></html>");
+    return;
+  }
+  
+  // For all other requests, redirect to landing page
+  String redirectUrl = "http://192.168.4.1/";
+  server.sendHeader("Location", redirectUrl, true);
+  server.send(302, "text/html", "<html><body><a href=\"" + redirectUrl + "\">Click here if not redirected</a></body></html>");
 }
 
 void handleGenerate204() {
-  server.send(204);  // iOS captive portal
+  server.send(204);  // Android captive portal check
+}
+
+void handleNcsi() {
+  server.send(200, "text/plain", "Microsoft NCSI");  // Windows captive portal
+}
+
+void handleAppleCaptive() {
+  // iOS sends request to this endpoint - respond with success but auto-redirect
+  String html = "<html><head><meta http-equiv=\"refresh\" content=\"0;url=http://192.168.4.1/\"></head><body>Success</body></html>";
+  server.send(200, "text/html", html);
 }
 
 // ============================================
@@ -627,6 +538,10 @@ void setup() {
   server.on("/", handleRoot);
   server.on("/chat", handleChat);
   server.on("/generate_204", handleGenerate204);
+  server.on("/ncsi.txt", handleNcsi);
+  server.on("/connecttest.txt", handleNcsi);
+  server.on("/hotspot-detect.html", handleAppleCaptive);
+  server.on("/captive/canonical.html", handleRoot);
   server.onNotFound(handleNotFound);
   server.begin();
   Serial.println("✓ HTTP Server started (port 80)");
@@ -643,7 +558,9 @@ void setup() {
   }
   
   // Welcome message
-  pushMsg("*", "BBS ONLINE. WELCOME TO " + String(BOARD_NAME), true);
+  char welcome[128];
+  sprintf(welcome, "BBS ONLINE. WELCOME TO %s", BOARD_NAME);
+  pushMsg("*", welcome, true);
   pushMsg("*", "Local network only. No internet.", true);
   pushMsg("*", "Choose a handle and start chatting!", true);
   

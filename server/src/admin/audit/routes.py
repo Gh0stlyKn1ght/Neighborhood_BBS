@@ -19,11 +19,12 @@ from functools import wraps
 from datetime import datetime, timedelta
 import logging
 
-from services.audit_log_service import audit_log_service, AuditLogService
-from rate_limiter import rate_limiter
+from services.audit_log_service import audit_log_service, AuditLogService   
+from server import limiter
 
 logger = logging.getLogger(__name__)
 
+# Create blueprint
 audit_bp = Blueprint('audit', __name__, url_prefix='/api/admin/audit')
 
 
@@ -49,7 +50,7 @@ def require_admin_auth(f):
 
 
 @audit_bp.route('/logs', methods=['GET'])
-@rate_limiter.limit("30 per minute")
+@limiter.limit("30 per minute")
 @require_admin_auth
 def get_audit_logs():
     """
@@ -104,7 +105,7 @@ def get_audit_logs():
 
 
 @audit_bp.route('/logs/search', methods=['GET'])
-@rate_limiter.limit("20 per minute")
+@limiter.limit("20 per minute")
 @require_admin_auth
 def search_audit_logs():
     """
@@ -165,7 +166,7 @@ def search_audit_logs():
 
 
 @audit_bp.route('/logs/category/<category>', methods=['GET'])
-@rate_limiter.limit("30 per minute")
+@limiter.limit("30 per minute")
 @require_admin_auth
 def get_logs_by_category(category):
     """Get audit logs filtered by action category"""
@@ -203,7 +204,7 @@ def get_logs_by_category(category):
 
 
 @audit_bp.route('/logs/admin/<admin_user>', methods=['GET'])
-@rate_limiter.limit("30 per minute")
+@limiter.limit("30 per minute")
 @require_admin_auth
 def get_logs_by_admin(admin_user):
     """Get audit logs for a specific admin"""
@@ -224,7 +225,7 @@ def get_logs_by_admin(admin_user):
 
 
 @audit_bp.route('/logs/user/<target_user>', methods=['GET'])
-@rate_limiter.limit("30 per minute")
+@limiter.limit("30 per minute")
 @require_admin_auth
 def get_logs_by_target(target_user):
     """Get audit logs for actions targeting a specific user"""
@@ -245,7 +246,7 @@ def get_logs_by_target(target_user):
 
 
 @audit_bp.route('/logs/export', methods=['GET'])
-@rate_limiter.limit("5 per minute")
+@limiter.limit("5 per minute")
 @require_admin_auth
 def export_audit_logs():
     """
@@ -305,7 +306,7 @@ def export_audit_logs():
 
 
 @audit_bp.route('/stats', methods=['GET'])
-@rate_limiter.limit("30 per minute")
+@limiter.limit("30 per minute")
 @require_admin_auth
 def get_audit_stats():
     """Get audit log statistics and summary"""
@@ -323,7 +324,7 @@ def get_audit_stats():
 
 
 @audit_bp.route('/report', methods=['GET'])
-@rate_limiter.limit("10 per minute")
+@limiter.limit("10 per minute")
 @require_admin_auth
 def get_audit_report():
     """Get detailed audit report"""
@@ -343,7 +344,7 @@ def get_audit_report():
 
 
 @audit_bp.route('/info', methods=['GET'])
-@rate_limiter.limit("60 per minute")
+@limiter.limit("60 per minute")
 @require_admin_auth
 def get_audit_info():
     """Get information about audit log system"""

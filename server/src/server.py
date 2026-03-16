@@ -69,6 +69,7 @@ def create_app(config_file=None):
     from moderation.routes import moderation_bp
     from access.routes import access_bp
     from privacy_consent.routes import privacy_consent_bp
+    from bulletins.routes import bulletins_bp
     from admin.audit.routes import audit_bp
     from admin.analytics.routes import analytics_bp
 
@@ -81,6 +82,7 @@ def create_app(config_file=None):
     app.register_blueprint(moderation_bp)
     app.register_blueprint(access_bp)
     app.register_blueprint(privacy_consent_bp)
+    app.register_blueprint(bulletins_bp)
     app.register_blueprint(audit_bp)
     app.register_blueprint(analytics_bp)
     
