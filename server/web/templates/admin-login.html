@@ -151,16 +151,29 @@
         </form>
     </div>
 
+    <script src="/static/js/admin-auth.js"></script>
     <script>
         const form = document.getElementById('loginForm');
         const errorMessage = document.getElementById('errorMessage');
         const loading = document.getElementById('loading');
 
+        // Check if already logged in
+        if (adminAuth.isLoggedIn()) {
+            window.location.href = '/admin/dashboard';
+        }
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const username = document.getElementById('username').value;
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+
+            // Validation
+            if (!username || !password) {
+                errorMessage.textContent = 'Username and password are required';
+                errorMessage.classList.add('show');
+                return;
+            }
 
             errorMessage.classList.remove('show');
             loading.style.display = 'block';
@@ -168,32 +181,36 @@
             form.style.pointerEvents = 'none';
 
             try {
-                const response = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ username, password }),
-                    credentials: 'include'
-                });
+                const result = await adminAuth.login(username, password);
 
-                const data = await response.json();
-
-                if (response.ok) {
-                    // Redirect to dashboard
-                    window.location.href = '/admin/dashboard.html';
+                if (result.success) {
+                    // Redirect to dashboard after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/admin/dashboard';
+                    }, 500);
                 } else {
-                    errorMessage.textContent = data.error || 'Login failed';
+                    errorMessage.textContent = result.error || 'Login failed';
                     errorMessage.classList.add('show');
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
                 }
             } catch (error) {
-                errorMessage.textContent = 'Network error: ' + error.message;
+                console.error('Login error:', error);
+                errorMessage.textContent = 'An error occurred. Please try again.';
                 errorMessage.classList.add('show');
             } finally {
                 loading.style.display = 'none';
                 form.style.opacity = '1';
                 form.style.pointerEvents = 'auto';
             }
+        });
+
+        // Clear error message when user starts typing
+        document.getElementById('username').addEventListener('input', () => {
+            errorMessage.classList.remove('show');
+        });
+        document.getElementById('password').addEventListener('input', () => {
+            errorMessage.classList.remove('show');
         });
     </script>
 </body>
