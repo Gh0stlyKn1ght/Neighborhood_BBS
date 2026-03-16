@@ -838,3 +838,128 @@ class ThemeSettings:
         cursor.execute('DELETE FROM themes WHERE id = ?', (theme_id,))
         conn.commit()
         conn.close()
+
+
+class User:
+    """User registration model for authenticated users"""
+    
+    @staticmethod
+    def create_user(username, email, password_hash, requires_approval=False, approved_by=None):
+        """Create a new registered user"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                '''INSERT INTO user_registrations 
+                   (username, email, password_hash, is_active, requires_approval, approved_by)
+                   VALUES (?, ?, ?, 1, ?, ?)''',
+                (username, email, password_hash, requires_approval, approved_by)
+            )
+            conn.commit()
+            user_id = cursor.lastrowid
+            conn.close()
+            logger.info(f"User created: {username}")
+            return user_id
+        except sqlite3.IntegrityError as e:
+            conn.close()
+            logger.warning(f"IntegrityError creating user {username}: {e}")
+            return None
+        except Exception as e:
+            conn.close()
+            logger.error(f"Error creating user {username}: {e}")
+            return None
+    
+    @staticmethod
+    def get_by_username(username):
+        """Get user by username"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM user_registrations WHERE username = ? AND is_active = 1', (username,))
+        user = cursor.fetchone()
+        conn.close()
+        return dict(user) if user else None
+    
+    @staticmethod
+    def get_by_email(email):
+        """Get user by email"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM user_registrations WHERE email = ? AND is_active = 1', (email,))
+        user = cursor.fetchone()
+        conn.close()
+        return dict(user) if user else None
+    
+    @staticmethod
+    def get_by_id(user_id):
+        """Get user by ID"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM user_registrations WHERE id = ? AND is_active = 1', (user_id,))
+        user = cursor.fetchone()
+        conn.close()
+        return dict(user) if user else None
+    
+    @staticmethod
+    def update_last_login(username):
+        """Update user's last login timestamp"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE user_registrations SET last_login = CURRENT_TIMESTAMP WHERE username = ?',
+            (username,)
+        )
+        conn.commit()
+        conn.close()
+        logger.debug(f"Updated last_login for {username}")
+    
+    @staticmethod
+    def deactivate_user(username):
+        """Deactivate a user account"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE user_registrations SET is_active = 0 WHERE username = ?',
+            (username,)
+        )
+        conn.commit()
+        conn.close()
+        logger.info(f"User deactivated: {username}")
+    
+    @staticmethod
+    def username_exists(username):
+        """Check if username already exists"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM user_registrations WHERE username = ?', (username,))
+        exists = cursor.fetchone() is not None
+        conn.close()
+        return exists
+    
+    @staticmethod
+    def email_exists(email):
+        """Check if email already exists"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM user_registrations WHERE email = ?', (email,))
+        exists = cursor.fetchone() is not None
+        conn.close()
+        return exists
+    
+    @staticmethod
+    def get_all_users(active_only=True):
+        """Get all users"""
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        if active_only:
+            cursor.execute(
+                '''SELECT id, username, email, is_active, created_at, last_login, approved_at
+                   FROM user_registrations WHERE is_active = 1 ORDER BY created_at DESC'''
+            )
+        else:
+            cursor.execute(
+                '''SELECT id, username, email, is_active, created_at, last_login, approved_at
+                   FROM user_registrations ORDER BY created_at DESC'''
+            )
+        users = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return users

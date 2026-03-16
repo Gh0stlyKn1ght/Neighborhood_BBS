@@ -25,9 +25,9 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 from main import create_app
-from models import db, SetupConfig, UserRegistration
+from models import db
 from services.approval_access_service import get_approval_service
-from setup_config import SetupConfig as SetupConfigClass
+from setup_config import SetupConfig
 
 
 class TestAdminAuthenticationOnApprovalEndpoints:

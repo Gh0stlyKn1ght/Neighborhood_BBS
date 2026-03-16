@@ -41,8 +41,22 @@ class MessagePersistenceFullPrivacyTests(unittest.TestCase):
     def tearDownClass(cls):
         """Clean up"""
         import os
+        import time
+        
+        # Wait for any pending operations
+        time.sleep(0.1)
+        
+        # Try to remove the database file with retry
         if os.path.exists(cls.temp_db_path):
-            os.unlink(cls.temp_db_path)
+            for attempt in range(3):
+                try:
+                    os.unlink(cls.temp_db_path)
+                    break
+                except PermissionError:
+                    if attempt < 2:
+                        time.sleep(0.2)
+                    else:
+                        pass  # Give up on final attempt
     
     def setUp(self):
         """Set up each test"""

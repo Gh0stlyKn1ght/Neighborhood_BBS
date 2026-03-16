@@ -44,8 +44,35 @@ class BulletinsAPITests(unittest.TestCase):
     def tearDownClass(cls):
         """Clean up test database"""
         import os
+        import time
+        # Close socketio client
+        try:
+            cls.socketio_client.disconnect()
+        except:
+            pass
+        
+        # Close app context
+        try:
+            cls.app.app_context().pop()
+        except:
+            pass
+        
+        # Wait a moment for resources to be freed
+        time.sleep(0.1)
+        
+        # Try to remove the database file
         if os.path.exists(cls.temp_db_path):
-            os.unlink(cls.temp_db_path)
+            try:
+                os.unlink(cls.temp_db_path)
+            except PermissionError:
+                # If still locked, try a few more times
+                for _ in range(3):
+                    time.sleep(0.2)
+                    try:
+                        os.unlink(cls.temp_db_path)
+                        break
+                    except:
+                        continue
     
     def setUp(self):
         """Clear bulletins before each test"""

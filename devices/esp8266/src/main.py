@@ -42,6 +42,12 @@ MIN_RECONNECT_INTERVAL = 10
 MAX_RESPONSE_SIZE = 50000  # Prevent buffer overflow (in bytes)
 MAX_RECURSION_DEPTH = 3
 
+# Pagination & Performance
+DEFAULT_PAGE_SIZE = 10  # Messages per page (memory efficient)
+MAX_PAGE_SIZE = 50      # Server-side limit
+DEFAULT_RETRY_ATTEMPTS = 3  # Network retry attempts
+RETRY_BACKOFF = 2  # Exponential backoff multiplier
+
 DEFAULT_CONFIG = {
     "ssid": "Your_WiFi_SSID",
     "password": "Your_WiFi_Password",
@@ -168,6 +174,48 @@ class SecurityValidator:
         for char, entity in replacements.items():
             result = result.replace(char, entity)
         return result
+
+class MessagePageIterator:
+    """Memory-efficient pagination for message fetching"""
+    
+    def __init__(self, client, room_id, page_size=DEFAULT_PAGE_SIZE):
+        self.client = client
+        self.room_id = room_id
+        self.page_size = min(page_size, MAX_PAGE_SIZE)  # Cap at server limit
+        self.offset = 0
+        self.has_more = True
+        self.total_fetched = 0
+    
+    def fetch_next_page(self):
+        """Fetch next page of messages, returns list or None on error"""
+        if not self.has_more:
+            return None
+        
+        messages = self.client.get_messages(self.room_id, self.page_size)
+        
+        if not messages:
+            self.has_more = False
+            return None
+        
+        self.offset += len(messages)
+        self.total_fetched += len(messages)
+        
+        # If we got fewer messages than requested, no more pages
+        if len(messages) < self.page_size:
+            self.has_more = False
+        
+        return messages
+    
+    def fetch_all(self, max_messages=100):
+        """Fetch all messages up to max_messages, returns complete list"""
+        all_messages = []
+        while self.has_more and self.total_fetched < max_messages:
+            page = self.fetch_next_page()
+            if page:
+                all_messages.extend(page)
+            else:
+                break
+        return all_messages
 
 class RateLimiter:
     """Handle exponential backoff for rate limiting"""
@@ -337,18 +385,21 @@ class NeighborhoodBBSClient:
     def login(self):
         """Login with username and password to get JWT token"""
         if self.auth_mode != "user":
-            print("Login: Auth mode is not 'user'")
+            print("ERROR: Auth mode is not 'user'. Set auth_mode='user' in config")
             return False
 
         if not self.wifi_connected:
-            print("Error: Not connected to WiFi")
+            print("ERROR: Cannot login while offline. Connect to WiFi first")
             return False
 
         username = self.config.get("username", "")
         password = self.config.get("user_password", "")
 
-        if not username or not password:
-            print("Error: Username and password required in config")
+        if not username:
+            print("ERROR: Username not found in config. Add 'username' field")
+            return False
+        if not password:
+            print("ERROR: Password not found in config. Add 'user_password' field")
             return False
 
         try:
@@ -356,7 +407,7 @@ class NeighborhoodBBSClient:
             username = SecurityValidator.validate_username(username)
             password = SecurityValidator.validate_password(password)
         except (ValueError, TypeError) as e:
-            print("Input validation error: {}".format(e))
+            print("ERROR: Invalid username/password format: {}".format(e))
             return False
 
         try:
@@ -367,7 +418,7 @@ class NeighborhoodBBSClient:
             }
             headers = {"Content-Type": "application/json"}
 
-            print("Attempting login as: {}".format(username))
+            print(">> Logging in as: {}".format(username))
             response = urequests.post(
                 url,
                 data=json.dumps(data),
@@ -379,7 +430,7 @@ class NeighborhoodBBSClient:
                 # Buffer overflow protection
                 response_size = len(response.content) if hasattr(response, 'content') else 0
                 if response_size > MAX_RESPONSE_SIZE:
-                    print("Error: Response too large")
+                    print("ERROR: Server response too large (possible attack)")
                     response.close()
                     return False
                 
@@ -390,8 +441,20 @@ class NeighborhoodBBSClient:
 
                 # Save token
                 self._save_token()
-                print("Login successful! Token received.")
+                print("SUCCESS: Login successful! Welcome {}".format(self.username))
                 return True
+            elif response.status_code == 401:
+                print("ERROR: Invalid username or password. Check credentials and try again")
+                response.close()
+                return False
+            elif response.status_code == 404:
+                print("ERROR: User account not found. Please register first")
+                response.close()
+                return False
+            elif response.status_code == 429:
+                print("ERROR: Too many login attempts. Wait before retrying")
+                response.close()
+                return False
             else:
                 error = "Unknown error"
                 try:
@@ -399,26 +462,32 @@ class NeighborhoodBBSClient:
                     error = data.get("error", error)
                 except:
                     pass
-                print("Login failed: {} (Status: {})".format(error, response.status_code))
+                print("ERROR: Login failed - {} (HTTP {})".format(error, response.status_code))
                 response.close()
                 return False
 
         except Exception as e:
-            print(f"Login error: {e}")
+            print("ERROR: Login failed - {}".format(e))
             return False
 
     def register(self):
         """Register new user account"""
         if not self.wifi_connected:
-            print("Error: Not connected to WiFi")
+            print("ERROR: Cannot register while offline. Connect to WiFi first")
             return False
 
         username = self.config.get("username", "")
         password = self.config.get("user_password", "")
         email = self.config.get("email", "")
 
-        if not username or not password or not email:
-            print("Error: Username, password, and email required in config")
+        if not username:
+            print("ERROR: Username not found in config. Add 'username' field")
+            return False
+        if not password:
+            print("ERROR: Password not found in config. Add 'user_password' field")
+            return False
+        if not email:
+            print("ERROR: Email not found in config. Add 'email' field")
             return False
 
         try:
@@ -427,7 +496,7 @@ class NeighborhoodBBSClient:
             password = SecurityValidator.validate_password(password)
             email = SecurityValidator.validate_email(email)
         except (ValueError, TypeError) as e:
-            print("Input validation error: {}".format(e))
+            print("ERROR: Invalid input - {}".format(e))
             return False
 
         try:
@@ -440,7 +509,7 @@ class NeighborhoodBBSClient:
             }
             headers = {"Content-Type": "application/json"}
 
-            print("Attempting to register: {}".format(username))
+            print(">> Registering new account: {}".format(username))
             response = urequests.post(
                 url,
                 data=json.dumps(data),
@@ -452,7 +521,7 @@ class NeighborhoodBBSClient:
                 # Buffer overflow protection
                 response_size = len(response.content) if hasattr(response, 'content') else 0
                 if response_size > MAX_RESPONSE_SIZE:
-                    print("Error: Response too large")
+                    print("ERROR: Server response too large (possible attack)")
                     response.close()
                     return False
                 
@@ -463,8 +532,26 @@ class NeighborhoodBBSClient:
 
                 # Save token
                 self._save_token()
-                print("Registration successful! User: {}".format(username))
+                print("SUCCESS: Registration complete! Welcome {}".format(username))
+                print("INFO: User email: {}".format(email))
                 return True
+            elif response.status_code == 409:
+                print("ERROR: Username or email already taken. Choose different credentials")
+                response.close()
+                return False
+            elif response.status_code == 400:
+                try:
+                    data = response.json()
+                    error = data.get("error", "Invalid registration data")
+                except:
+                    error = "Invalid registration data"
+                print("ERROR: Registration failed - {}".format(error))
+                response.close()
+                return False
+            elif response.status_code == 429:
+                print("ERROR: Too many registration attempts. Wait before retrying")
+                response.close()
+                return False
             else:
                 error = "Unknown error"
                 try:
@@ -472,12 +559,12 @@ class NeighborhoodBBSClient:
                     error = data.get("error", error)
                 except:
                     pass
-                print("Registration failed: {} (Status: {})".format(error, response.status_code))
+                print("ERROR: Registration failed - {} (HTTP {})".format(error, response.status_code))
                 response.close()
                 return False
 
         except Exception as e:
-            print(f"Registration error: {e}")
+            print("ERROR: Registration failed - {}".format(e))
             return False
 
     def verify_token(self):
@@ -703,7 +790,7 @@ class NeighborhoodBBSClient:
             ))
             headers = self._get_auth_headers()
 
-            print("Fetching authenticated messages from room {}...".format(room_id))
+            print("Fetching {} authenticated messages from room {}...".format(limit, room_id))
             response = urequests.get(
                 url,
                 headers=headers,
@@ -714,22 +801,37 @@ class NeighborhoodBBSClient:
                 # Buffer overflow protection: check response size
                 response_size = len(response.content) if hasattr(response, 'content') else 0
                 if response_size > MAX_RESPONSE_SIZE:
-                    print("Error: Response too large ({} bytes)".format(response_size))
+                    print("Error: Response too large ({} bytes, max {})".format(
+                        response_size, MAX_RESPONSE_SIZE))
                     response.close()
                     return []
                 
-                data = response.json()
+                # Robust response parsing
+                try:
+                    data = response.json()
+                except (ValueError, KeyError) as e:
+                    print("Error parsing response JSON: {}".format(e))
+                    response.close()
+                    return []
+                
                 messages = data.get("messages", [])
+                if not isinstance(messages, list):
+                    print("Error: Response messages not a list")
+                    response.close()
+                    return []
+                
                 self.request_count += 1
                 self.rate_limiter.reset()
                 response.close()
+                print("Fetched {} messages".format(len(messages)))
                 return messages
             elif response.status_code == 401:
-                print("Error: Token expired or invalid. Re-authenticating...")
+                print("Error: Token expired or invalid (401). Re-authenticating...")
                 response.close()
                 # Prevent infinite recursion
                 if self._auth_retry_count >= MAX_RECURSION_DEPTH:
-                    print("Max re-authentication attempts reached")
+                    print("Max re-authentication attempts ({}) reached".format(
+                        MAX_RECURSION_DEPTH))
                     return []
                 # Try to refresh token
                 self._auth_retry_count += 1
@@ -739,20 +841,24 @@ class NeighborhoodBBSClient:
                 self._auth_retry_count = 0
                 return []
             elif response.status_code == 404:
-                print("Error: Room {} not found".format(room_id))
+                print("Error: Room {} not found (404)".format(room_id))
                 response.close()
                 return []
             elif response.status_code == 429:
                 backoff = self.rate_limiter.on_rate_limit()
                 response.close()
                 return []
+            elif response.status_code == 500:
+                print("Error: Server error (500). Check server logs.".format())
+                response.close()
+                return []
             else:
-                print("Error: Server returned {}".format(response.status_code))
+                print("Error: Unexpected status {} from server".format(response.status_code))
                 response.close()
                 return []
 
         except Exception as e:
-            print("Error getting authenticated messages: {}".format(e))
+            print("Error fetching authenticated messages: {}".format(e))
             return []
 
     def _get_messages_anonymous(self, room_id, limit=50):
@@ -762,7 +868,7 @@ class NeighborhoodBBSClient:
                 room_id, limit
             ))
 
-            print("Fetching anonymous messages from room {}...".format(room_id))
+            print("Fetching {} anonymous messages from room {}...".format(limit, room_id))
             response = urequests.get(
                 url,
                 timeout=self.config.get("timeout", 10)
@@ -772,53 +878,139 @@ class NeighborhoodBBSClient:
                 # Buffer overflow protection: check response size
                 response_size = len(response.content) if hasattr(response, 'content') else 0
                 if response_size > MAX_RESPONSE_SIZE:
-                    print("Error: Response too large ({} bytes)".format(response_size))
+                    print("Error: Response too large ({} bytes, max {})".format(
+                        response_size, MAX_RESPONSE_SIZE))
                     response.close()
                     return []
                 
-                data = response.json()
+                # Robust response parsing
+                try:
+                    data = response.json()
+                except (ValueError, KeyError) as e:
+                    print("Error parsing response JSON: {}".format(e))
+                    response.close()
+                    return []
+                
                 messages = data.get("messages", [])
+                if not isinstance(messages, list):
+                    print("Error: Response messages not a list")
+                    response.close()
+                    return []
+                
                 self.request_count += 1
                 self.rate_limiter.reset()
                 response.close()
+                print("Fetched {} messages".format(len(messages)))
                 return messages
             elif response.status_code == 404:
-                print("Error: Room {} not found".format(room_id))
+                print("Error: Room {} not found (404)".format(room_id))
                 response.close()
                 return []
             elif response.status_code == 429:
                 backoff = self.rate_limiter.on_rate_limit()
                 response.close()
                 return []
+            elif response.status_code == 500:
+                print("Error: Server error (500). Check server logs.")
+                response.close()
+                return []
             else:
-                print("Error: Server returned {}".format(response.status_code))
+                print("Error: Unexpected status {} from server".format(response.status_code))
                 response.close()
                 return []
 
         except Exception as e:
-            print("Error getting anonymous messages: {}".format(e))
+            print("Error fetching anonymous messages: {}".format(e))
+            return []
+
+    def _parse_json_response(self, response, expected_key=None):
+        """Safely parse JSON response, returns data or None on error"""
+        try:
+            if response.status_code == 200:
+                # Size check
+                response_size = len(response.content) if hasattr(response, 'content') else 0
+                if response_size > MAX_RESPONSE_SIZE:
+                    print("Error: Response too large ({} bytes)".format(response_size))
+                    return None
+                
+                # Parse JSON
+                try:
+                    data = response.json()
+                except (ValueError, KeyError) as e:
+                    print("Error: Invalid JSON response: {}".format(e))
+                    return None
+                
+                # Validate structure
+                if expected_key and expected_key not in data:
+                    print("Error: Missing expected key '{}' in response".format(expected_key))
+                    return None
+                
+                return data
+            else:
+                return None
+        finally:
+            response.close()
+
+    def get_paginated_messages(self, room_id, max_messages=100):
+        """Get messages with automatic pagination for memory efficiency"""
+        if not self.wifi_connected:
+            print("Error: Not connected to WiFi")
+            return []
+        
+        try:
+            page_iterator = MessagePageIterator(self, room_id, DEFAULT_PAGE_SIZE)
+            return page_iterator.fetch_all(max_messages)
+        except Exception as e:
+            print("Error fetching paginated messages: {}".format(e))
             return []
 
     def get_rooms(self):
-        """Get list of available chat rooms"""
+        """Get list of available chat rooms with robust error handling"""
         if not self.wifi_connected:
             print("Error: Not connected to WiFi")
             return []
 
         try:
             url = self._build_url("/api/chat/rooms")
+            print("Fetching available rooms...")
             response = urequests.get(
                 url,
                 timeout=self.config.get("timeout", 10)
             )
 
             if response.status_code == 200:
-                data = response.json()
+                # Size check
+                response_size = len(response.content) if hasattr(response, 'content') else 0
+                if response_size > MAX_RESPONSE_SIZE:
+                    print("Error: Response too large ({} bytes)".format(response_size))
+                    response.close()
+                    return []
+                
+                # Parse JSON
+                try:
+                    data = response.json()
+                except (ValueError, KeyError) as e:
+                    print("Error parsing rooms response: {}".format(e))
+                    response.close()
+                    return []
+                
+                # Validate structure
                 rooms = data.get("rooms", [])
+                if not isinstance(rooms, list):
+                    print("Error: Rooms response not a list")
+                    response.close()
+                    return []
+                
                 response.close()
+                print("Found {} available room(s)".format(len(rooms)))
                 return rooms
+            elif response.status_code == 500:
+                print("Error: Server error (500). Check server logs.")
+                response.close()
+                return []
             else:
-                print("Error getting rooms: {}".format(response.status_code))
+                print("Error: Server returned {} when fetching rooms".format(
+                    response.status_code))
                 response.close()
                 return []
 

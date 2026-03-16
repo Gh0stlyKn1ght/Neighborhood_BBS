@@ -19,7 +19,7 @@ BULLETINS_ROOM = 'bulletins_broadcast'
 
 
 @socketio.on('join_bulletins')
-def on_join_bulletins(data):
+def on_join_bulletins():
     """
     User subscribes to bulletin updates
     Joins the bulletins broadcast room and gets current bulletins
@@ -45,7 +45,7 @@ def on_join_bulletins(data):
 
 
 @socketio.on('leave_bulletins')
-def on_leave_bulletins(data):
+def on_leave_bulletins():
     """User unsubscribes from bulletin updates"""
     try:
         leave_room(BULLETINS_ROOM)
@@ -56,12 +56,14 @@ def on_leave_bulletins(data):
 
 
 @socketio.on('get_bulletins')
-def on_get_bulletins(data):
+def on_get_bulletins(*args):
     """
     Client requests current bulletins
     Emits: bulletins_list event with all active bulletins
     """
     try:
+        # Handle both call with and without data argument
+        data = args[0] if args else None
         include_expired = data.get('include_expired', False) if data else False
         
         bulletins = bulletin_service.list_bulletins(

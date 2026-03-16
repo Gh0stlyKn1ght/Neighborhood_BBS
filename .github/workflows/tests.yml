@@ -28,19 +28,19 @@ jobs:
 
     - name: Lint with flake8
       run: |
-        flake8 src/
+        flake8 server/src/ --exclude=test_*.py
 
     - name: Type check with mypy
       run: |
-        mypy src/ --ignore-missing-imports
+        mypy server/src/ --ignore-missing-imports
 
     - name: Format check with black
       run: |
-        black --check src/
+        black --check server/src/
 
     - name: Run tests with pytest
       run: |
-        pytest tests/ --cov=src --cov-report=xml
+        pytest server/tests/ --cov=server/src --cov-report=xml
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

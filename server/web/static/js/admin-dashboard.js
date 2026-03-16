@@ -35,6 +35,14 @@ class AdminDashboard {
         this.updateUserInfo();
         await this.loadDashboardData();
         
+        // Initialize notifications if available
+        if (typeof initNotificationManager === 'function') {
+            const nmgr = initNotificationManager(adminAuth);
+            await nmgr.init();
+            this.initNotificationListeners();
+            await this.updateNotificationBadge();
+        }
+        
         // Listen for auth changes
         adminAuth.onChange((event) => {
             if (event === 'loggedOut') {
@@ -166,6 +174,9 @@ class AdminDashboard {
                     break;
                 case 'analytics':
                     await this.loadAnalytics();
+                    break;
+                case 'notifications':
+                    await this.loadNotifications();
                     break;
             }
         } catch (e) {
@@ -723,6 +734,160 @@ class AdminDashboard {
         
         container.innerHTML = html;
         this.showSuccess('Analytics loaded');
+    }
+    
+    // ========== NOTIFICATIONS ==========
+    
+    /**
+     * Load notifications
+     */
+    async loadNotifications() {
+        try {
+            this.showLoading('Loading notifications...');
+            
+            // Initialize notification manager if not already done
+            if (!window.notificationManager) {
+                const nmgr = initNotificationManager(adminAuth);
+                await nmgr.init();
+            }
+            
+            // Get notifications
+            const notifications = await window.notificationManager.fetchNotifications(50);
+            this.renderNotifications(notifications);
+        } catch (e) {
+            this.showError(`Error loading notifications: ${adminApi.formatError(e)}`);
+        } finally {
+            this.hideLoading();
+        }
+    }
+    
+    /**
+     * Render notifications
+     */
+    renderNotifications(notifications) {
+        const container = document.getElementById('notificationsContainer');
+        if (!container) return;
+        
+        if (notifications.length === 0) {
+            container.innerHTML = '<div class="no-notifications">No notifications</div>';
+            return;
+        }
+        
+        let html = '<div class="notifications-list">';
+        
+        notifications.forEach(notif => {
+            const readClass = notif.read ? 'read' : 'unread';
+            const severityClass = `severity-${notif.severity}`;
+            const createdDate = new Date(notif.created_at).toLocaleString();
+            
+            html += `
+                <div class="notification-item ${readClass} ${severityClass}" data-notification-id="${notif.notification_id}">
+                    <div class="notification-header">
+                        <div class="notification-title">${this.escapeHtml(notif.title)}</div>
+                        <div class="notification-time">${createdDate}</div>
+                    </div>
+                    <div class="notification-message">${this.escapeHtml(notif.message)}</div>
+                    <div class="notification-actions">
+                        ${!notif.read ? `<button class="btn-small mark-read" data-notification-id="${notif.notification_id}">Mark as read</button>` : ''}
+                        <button class="btn-small delete-notif" data-notification-id="${notif.notification_id}">Delete</button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+        
+        // Add event listeners to notification actions
+        container.querySelectorAll('.mark-read').forEach(btn => {
+            btn.addEventListener('click', (e) => this.handleMarkNotificationRead(e));
+        });
+        
+        container.querySelectorAll('.delete-notif').forEach(btn => {
+            btn.addEventListener('click', (e) => this.handleDeleteNotification(e));
+        });
+    }
+    
+    /**
+     * Handle marking notification as read
+     */
+    async handleMarkNotificationRead(e) {
+        e.preventDefault();
+        const notificationId = e.target.dataset.notificationId;
+        
+        if (window.notificationManager) {
+            const success = await window.notificationManager.markAsRead(notificationId);
+            if (success) {
+                this.showSuccess('Notification marked as read');
+                await this.loadNotifications();
+            } else {
+                this.showError('Failed to mark notification as read');
+            }
+        }
+    }
+    
+    /**
+     * Handle deleting notification
+     */
+    async handleDeleteNotification(e) {
+        e.preventDefault();
+        const notificationId = e.target.dataset.notificationId;
+        
+        if (confirm('Delete this notification?')) {
+            if (window.notificationManager) {
+                const success = await window.notificationManager.deleteNotification(notificationId);
+                if (success) {
+                    this.showSuccess('Notification deleted');
+                    await this.loadNotifications();
+                } else {
+                    this.showError('Failed to delete notification');
+                }
+            }
+        }
+    }
+    
+    /**
+     * Update notification badge in navbar
+     */
+    async updateNotificationBadge() {
+        if (window.notificationManager) {
+            const count = await window.notificationManager.getUnreadCount();
+            const badge = document.getElementById('notificationBadge');
+            
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+    }
+    
+    /**
+     * Initialize notification listeners
+     */
+    initNotificationListeners() {
+        if (window.notificationManager) {
+            // Update UI when unread count changes
+            window.notificationManager.onUnreadCountUpdate = (count) => {
+                this.updateNotificationBadge();
+            };
+            
+            // Update UI when notifications list changes
+            window.notificationManager.onNotificationsUpdate = (notifications) => {
+                if (this.currentView === 'notifications') {
+                    this.renderNotifications(notifications);
+                }
+            };
+            
+            // Show toast when notification received
+            window.notificationManager.onNotificationReceived = (notification) => {
+                window.notificationManager.showToast(notification);
+                this.updateNotificationBadge();
+            };
+        }
     }
     
     // ========== UTILITIES ==========

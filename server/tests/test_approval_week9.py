@@ -29,9 +29,10 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
 from main import create_app
-from models import db, SetupConfig, UserRegistration
+from models import db
 from services.approval_access_service import ApprovalAccessService, get_approval_service
 from session_manager import SessionManager
+from setup_config import SetupConfig
 
 
 class TestApprovalAccessService:
