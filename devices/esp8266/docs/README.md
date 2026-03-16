@@ -2,6 +2,28 @@
 
 Run Neighborhood BBS on ESP8266 devices with the retro cyan CRT terminal theme - a portable WiFi-enabled BBS node.
 
+---
+
+## 📚 Complete Documentation
+
+**Start here based on your needs:**
+
+| Document | Purpose | For Whom |
+|----------|---------|----------|
+| [INSTALLATION.md](INSTALLATION.md) | Complete setup guide (MicroPython or Arduino) | Everyone - START HERE |
+| [BUILD_ANALYSIS.md](BUILD_ANALYSIS.md) | Code quality report & production readiness | Developers |
+| [DEVICE_SPECS.md](DEVICE_SPECS.md) | Hardware limitations & memory constraints | Technical planners |
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Error solutions & diagnostic tools | When things break |
+| [README.md](README.md) | This file - Overview & comparison | Quick reference |
+
+**Quick Links:**
+- 🚀 **First time?** → [INSTALLATION.md](INSTALLATION.md)
+- 🔧 **Having issues?** → [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+- 📊 **Checking quality?** → [BUILD_ANALYSIS.md](BUILD_ANALYSIS.md)
+- 💾 **Memory questions?** → [DEVICE_SPECS.md](DEVICE_SPECS.md)
+
+---
+
 ## Features
 
 - **Retro Cyan CRT Terminal Interface** - Classic ASCII art aesthetic  
