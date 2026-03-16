@@ -1,6 +1,13 @@
 # Neighborhood BBS - ZimaBoard Flask Implementation
 
-Local WiFi captive portal with persistent messages, live WebSocket chat, and admin dashboard.
+Local WiFi bulletin board system with persistent messages, live WebSocket chat, and admin dashboard.
+
+**Choose your deployment path:**
+- 🚀 **Quick start?** → [CasaOS (2 minutes)](#casaos-one-click)
+- 🔧 **Want control?** → [Native Debian (5 minutes)](#native-debian)
+- 🐳 **Prefer Docker?** → [Docker Compose (10 minutes)](#docker)
+
+---
 
 ## Features
 
@@ -14,294 +21,451 @@ Local WiFi captive portal with persistent messages, live WebSocket chat, and adm
   - Session-based admin auth
   - IP stripping (nginx proxy)
   - XSS-safe message handling
+- **Multi-platform**: Debian, Ubuntu, Docker, CasaOS
+- **Persistent Data**: SQLite database survives restarts
 
-## Hardware
+---
 
-- **ZimaBoard**: x86 single-board server
-- **USB WiFi Adapter** (optional): For higher range
-  - Recommended: Alfa AWUS036ACM (MT7612U, 200-500m range)
-  - Stock onboard WiFi: 30-50m typical
+## Hardware Requirements
 
-## Installation
+### ZimaBoard (x86)
+- Recommended: Intel or AMD x86 processor
+- RAM: 2GB+ (4GB recommended)
+- Storage: 10GB+ free space
+- Network: Ethernet + optional USB WiFi adapter
 
-### Quick Deploy (Automated)
+### USB WiFi Adapter (Optional)
+For better range (200-500m):
+- **Recommended**: Alfa AWUS036ACM (MT7612U)
+- **Budget**: TP-Link Archer T2U
+- **Stock**: ZimaBoard onboard WiFi (30-50m range)
+
+---
+
+## CasaOS (One-Click)
+
+**⏱️ ~2 minutes | 🎯 Easiest for everyone**
+
+If you have CasaOS installed:
+
+1. Open CasaOS: `http://<zimaboard-ip>`
+2. **AppStore** → Search "Neighborhood BBS"
+3. Click **Install**
+4. Wait ~30 seconds
+5. Access at: `http://<zimaboard-ip>:5000`
+
+**Default credentials:**
+- Username: `sysop`
+- Password: `gh0stly`
+
+**⚠️ CHANGE THIS PASSWORD IMMEDIATELY!**
+
+See [CASAOS_INTEGRATION.md](CASAOS_INTEGRATION.md) for detailed setup & submission to AppStore.
+
+---
+
+## Native Debian
+
+**⏱️ ~5 minutes | 🎯 Full control, lightweight**
+
+### Automated Setup
 
 ```bash
-# Copy to ZimaBoard
-scp -r zima/bbs root@<zimaboard-ip>:/opt/zima_bbs
+# SSH to ZimaBoard
+ssh root@zimaboard.local
 
-# Run setup
-ssh root@<zimaboard-ip>
-cd /opt/zima_bbs
+# Clone & install
+git clone https://github.com/Gh0stlyKn1ght/Neighborhood_BBS.git
+cd Neighborhood_BBS/devices/zima/bbs
 bash start.sh
 ```
 
-This will:
-- Install Python3, pip, nginx
-- Install Flask + flask-sock dependencies
-- Initialize SQLite database
-- Setup systemd service (auto-restart on reboot)
-- Configure nginx as reverse proxy
-- Start the BBS
+Done! Access at: `http://<zimaboard-ip>:8080`
 
 ### Manual Setup
 
 ```bash
-# SSH to ZimaBoard
-ssh root@zimaboard
-
 # Install dependencies
 apt-get update
 apt-get install -y python3 python3-pip nginx
 
 # Install Python packages
-cd /opt/zima_bbs
 pip3 install -r requirements.txt --break-system-packages
 
-# Create database
-python3 app.py &
-sleep 2
-kill %1
+# Initialize database
+python3 -c "from app import init_db; init_db()"
 
-# Setup service
-cp bbs.service /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable bbs
-systemctl start bbs
+# Setup systemd service (auto-restart)
+sudo cp bbs.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable bbs
+sudo systemctl start bbs
 
 # Configure nginx
-cp nginx.conf /etc/nginx/sites-available/bbs
-ln -s /etc/nginx/sites-available/bbs /etc/nginx/sites-enabled/bbs
-systemctl restart nginx
+sudo cp nginx.conf /etc/nginx/sites-available/bbs
+sudo ln -s /etc/nginx/sites-available/bbs /etc/nginx/sites-enabled/bbs
+sudo systemctl restart nginx
 ```
 
-## Access
-
-**From any device connected to WiFi `NEIGHBORHOOD_BBS`:**
-- http://192.168.4.1 - landing page
-- http://192.168.4.1/admin/login - admin panel (default: sysop / gh0stly)
-
-**From network:**
-- http://<zimaboard-ip>
-
-## Admin Panel
-
-Login: http://192.168.4.1/admin/login
-
-Default credentials:
-- Username: `sysop`
-- Password: `gh0stly`
-
-**CHANGE PASSWORD IMMEDIATELY AFTER FIRST LOGIN**
-
-Features:
-- Create/delete bulletins
-- View message history
-- Clear chat messages
-- Change admin password
-
-## Configuration
-
-### WiFi SSID
-
-In `/opt/zima_bbs/config/wifi.conf`:
-```
-SSID=NEIGHBORHOOD_BBS
-PASSWORD=  # leave blank for open AP
-CHANNEL=6  # 1-13 depending on region
-```
-
-(Currently hardcoded in hostapd setup - see `/etc/hostapd/hostapd.conf`)
-
-### Message History
-
-Default: keeps last 50 messages in database (persistent)
-- Older messages deleted automatically to prevent database bloat
-- Admin can clear chat with one button
-
-### Rate Limiting
-
-- 5 messages per 10 seconds per session
-- Returns 429 Too Many Requests if exceeded
-- Resets per window
-
-## Database
-
-SQLite at `/opt/zima_bbs/bbs.db`
-
-**Tables:**
-- `bulletins` - persistent message board
-- `messages` - chat history
-- `admin` - login credentials (password hashed)
-- `rate_limits` - session tracking
-
-## API Endpoints
-
-### Public
+### Verify
 
 ```bash
-# Get bulletins
-curl http://192.168.4.1/api/bulletins
+# Check service is running
+systemctl status bbs
 
-# Get chat history (default 50 messages)
-curl http://192.168.4.1/api/messages/history?limit=100
+# View logs
+journalctl -u bbs -f
 
-# Send message via REST (rate limited)
-curl -X POST http://192.168.4.1/api/send \
+# Test health endpoint
+curl http://localhost:5000/health
+```
+
+### Access
+
+- **Web Interface**: `http://<zimaboard-ip>:8080`
+- **Admin Panel**: `http://<zimaboard-ip>:8080/admin`
+  - Username: `sysop`
+  - Password: `gh0stly`
+
+### Management
+
+```bash
+# View logs in real-time
+journalctl -u bbs -f
+
+# Restart BBS
+systemctl restart bbs
+
+# Stop BBS
+systemctl stop bbs
+
+# Start BBS
+systemctl start bbs
+```
+
+---
+
+## Docker
+
+**⏱️ ~10 minutes | 🎯 Professional, scalable**
+
+### Quick Start with Docker Compose
+
+```bash
+# Clone repository
+git clone https://github.com/Gh0stlyKn1ght/Neighborhood_BBS.git
+cd Neighborhood_BBS/devices/zima/bbs
+
+# Start with Docker Compose
+docker-compose up -d
+
+# Verify
+docker-compose logs -f neighborhood-bbs
+```
+
+Access at: `http://<zimaboard-ip>:5000`
+
+### Building Your Own Image
+
+```bash
+docker build -t neighborhood-bbs:latest .
+
+docker run -d \
+  --name neighborhood-bbs \
+  -p 5000:5000 \
+  -v bbs_data:/app/data \
+  -e ADMIN_PASSWORD=your_password \
+  neighborhood-bbs:latest
+```
+
+### Management
+
+```bash
+# View logs
+docker-compose logs -f
+
+# Restart
+docker-compose restart
+
+# Stop
+docker-compose stop
+
+# Start
+docker-compose start
+
+# Update & restart
+docker-compose pull
+docker-compose up -d
+```
+
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for advanced Docker setup.
+
+---
+
+## Access the BBS
+
+### From Any Device on WiFi
+
+1. **Connect to WiFi**: `NEIGHBORHOOD_BBS`
+2. **Open browser**: Should auto-redirect
+3. **Or manually**: `http://192.168.x.x:5000`
+
+### Admin Panel
+
+- URL: `/admin`
+- Username: `sysop`
+- Password: `gh0stly` (CHANGE THIS!)
+
+Functions:
+- Create/edit bulletins
+- View/clear messages
+- Change admin password
+- View chat statistics
+
+---
+
+## API Reference
+
+### REST Endpoints
+
+```bash
+# Get bulletins (public)
+curl http://localhost:5000/api/bulletins
+
+# Get message history (public)
+curl http://localhost:5000/api/messages/history?limit=50
+
+# Send message (REST - for KITT, mobile apps)
+curl -X POST http://localhost:5000/api/send \
   -H "Content-Type: application/json" \
-  -d '{"handle":"KITT","text":"Temperature warning detected"}'
+  -d '{
+    "handle": "YOUR_NAME",
+    "text": "Hello from API"
+  }'
+
+# Health check (monitoring)
+curl http://localhost:5000/health
 ```
 
 ### WebSocket
 
-Connect to `ws://192.168.4.1/ws`
+Connect to `/ws` for real-time messaging:
 
-**Message types:**
-- `{"type":"nick_set","nick":"YOUR_NICK"}` - set display name
-- `{"type":"msg","text":"Hello neighbors"}` - send message
-- Server responds with history, confirmations, broadcasts
+```javascript
+const ws = new WebSocket('ws://localhost:5000/ws');
 
-## Deployment Examples
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log(data.messages); // Chat history on connect
+};
 
-### Option 1: Systemd Service (Recommended)
+// Set your nick
+ws.send(JSON.stringify({
+  type: 'nick_set',
+  nick: 'YOUR_NICKNAME'
+}));
 
-Runs at boot, auto-restart on crash:
+// Send message
+ws.send(JSON.stringify({
+  type: 'msg',
+  text: 'Hello everyone!'
+}));
+```
+
+---
+
+## Configuration
+
+### Environment Variables
+
 ```bash
-systemctl status bbs
+# Admin password
+export ADMIN_PASSWORD=your_secure_password
+
+# Production mode (no debug output)
+export FLASK_ENV=production
+
+# Port (default 5000)
+export LISTEN_PORT=5000
+```
+
+### Admin Settings (via Web UI)
+
+After login to `/admin`:
+1. Change admin password
+2. Edit welcome bulletins
+3. Configure message retention
+4. View activity logs
+
+### SQLite Database
+
+- **Location**: `bbs.db`
+- **Tables**: bulletins, messages, admin, rate_limits
+- **Retention**: Messages persist unless admin clears
+
+---
+
+## Persistence & Backup
+
+### Data Location
+
+- **Native Debian**: `/path/to/bbs.db`
+- **Docker**: `/app/data/bbs.db` (mounted volume)
+
+### Backing Up
+
+```bash
+# Native Debian
+cp bbs.db bbs_backup_$(date +%Y%m%d).db
+
+# Docker
+docker-compose exec neighborhood-bbs \
+  cp /app/data/bbs.db /app/data/bbs_backup.db
+
+# Or via Docker volume
+docker run --rm -v bbs_data:/data -v $(pwd):/backup \
+  alpine tar czf /backup/bbs_data.tar.gz -C /data .
+```
+
+### Restoring
+
+```bash
+# Native Debian
+cp bbs_backup.db bbs.db
 systemctl restart bbs
-journalctl -u bbs -f  # live logs
+
+# Docker
+docker-compose stop
+docker run --rm -v bbs_data:/data -v /backup:/backup \
+  alpine tar xzf /backup/bbs_data.tar.gz -C /data
+docker-compose start
 ```
 
-### Option 2: Manual Python
-
-```bash
-cd /opt/zima_bbs
-python3 app.py
-# Listens on 0.0.0.0:5000
-# nginx proxies port 80 → 5000
-```
-
-### Option 3: With Gunicorn (Production)
-
-```bash
-pip3 install gunicorn
-gunicorn --worker-class gevent --workers 4 app:app
-```
-
-## Security Notes
-
-1. **Default Password**: Change immediately on first login
-   ```bash
-   curl -X POST http://192.168.4.1/admin/password/change \
-     -d "old_password=gh0stly&new_password=YourNewPassword"
-   ```
-
-2. **IP Masking**: All client IPs stripped at nginx layer
-   - Flask logs never see real IPs
-   - Rate limiting by session, not IP
-
-3. **XSS Prevention**: Messages sanitized
-   - `<script>` tags stripped  
-   - `javascript:` URLs blocked
-   - Raw text stored, HTML-escaped on render
-
-4. **HTTPS** (optional): Add SSL cert to nginx
-   ```bash
-   # Example with Let's Encrypt
-   apt-get install -y certbot python3-certbot-nginx
-   certbot --nginx -d yourdomain.com
-   ```
+---
 
 ## Troubleshooting
 
-### BBS won't start
+### Service won't start (Native Debian)
 
 ```bash
 # Check logs
 journalctl -u bbs -n 50
 
-# Verify database
-sqlite3 /opt/zima_bbs/bbs.db ".tables"
+# Port already in use?
+sudo lsof -i :5000
 
-# Check port 5000
-lsof -i :5000
+# Permission error?
+chmod 755 /path/to/bbs
+chmod 644 /path/to/bbs.db
+```
+
+### Can't access web UI
+
+```bash
+# Verify service running
+curl http://localhost:5000/health
+
+# Check nginx (if using)
+ps aux | grep nginx
+
+# Firewall?
+sudo ufw allow 5000/tcp
+```
+
+### Database corrupted
+
+```bash
+# Backup corrupt DB
+mv bbs.db bbs.db.corrupted
+
+# Reinitialize
+python3 -c "from app import init_db; init_db()"
 
 # Restart
 systemctl restart bbs
 ```
 
-### Nginx shows blank page
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md#troubleshooting) for more solutions.
 
-```bash
-# Test config
-nginx -t
+---
 
-# Check proxy
-curl http://127.0.0.1:5000
+## Deployment Paths Comparison
 
-# Restart
-systemctl restart nginx
-```
+| Aspect | CasaOS | Native Debian | Docker |
+|--------|--------|---|---|
+| **Ease** | ⭐⭐⭐⭐⭐ Easiest | ⭐⭐⭐ Moderate | ⭐⭐⭐⭐ Easy |
+| **Setup time** | 2 min | 5 min | 10 min |
+| **RAM usage** | ~200MB | ~50MB | ~200MB |
+| **Updates** | Auto in UI | Manual git pull | Docker pull |
+| **Control** | Limited to UI | Full SSH | Full Docker |
+| **Best for** | End users | Developers | Teams/Scale |
+| **Scaling** | Via CasaOS | Multiple instances | Docker Compose |
 
-### WebSocket connection drops
+---
 
-- BBS keeps last 50 messages max (replay on reconnect)
-- 10-minute idle timeout (configurable)
-- Reconnect logic built into frontend
+## Documentation
 
-### Too many simultaneous users
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - All deployment methods in detail
+- **[CASAOS_INTEGRATION.md](CASAOS_INTEGRATION.md)** - CasaOS setup & AppStore submission
+- **[Dockerfile](Dockerfile)** - Container spec
+- **[docker-compose.yml](docker-compose.yml)** - Docker Compose config
+- **[casaos.yml](casaos.yml)** - CasaOS manifest
 
-- Default: 50 concurrent connections per adapter
-- Increase with: `WiFi.softAP(SSID, password, channel, false, 64)` (ESP8266)
-- On ZimaBoard+Linux: can handle 200+ with proper AP setup
+---
 
-## Level-Up Options
+## Development
 
-### Tier 2: MQTT Bridge to KITT
-
-ZimaBoard posts BBS chat as MQTT events:
-```bash
-pip3 install paho-mqtt
-# KITT subscribes, can post system alerts back
-```
-
-### Tier 3: Persistent Message Search
-
-Add full-text search in admin panel:
-```sql
-CREATE VIRTUAL TABLE messages_fts USING fts5(handle, text);
-```
-
-### Tier 4: Multiple APs
-
-Run BBS on multiple ZimaBoards with USB adapters for mesh coverage.
-
-## File Structure
+### Project Structure
 
 ```
 zima/bbs/
-├── app.py                 # Flask + WebSocket server
-├── start.sh              # Deployment script
-├── bbs.service          # Systemd unit
-├── nginx.conf           # Reverse proxy config
-├── requirements.txt     # Python dependencies
-├── static/
-│   └── logo.svg        # Green phosphor BBS logo
-├── templates/
-│   ├── base.html       # Base template (CRT scanlines, green text)
-│   ├── index.html      # Landing page
-│   ├── admin_login.html # Admin login
-│   └── admin.html      # Admin panel
-└── config/             # (planned) WiFi + BBS settings
+├── app.py                    # Flask application
+├── requirements.txt          # Python dependencies
+├── bbs.service              # Systemd service file
+├── nginx.conf               # Nginx configuration
+├── start.sh                 # Automated setup script
+├── Dockerfile               # Docker container spec
+├── docker-compose.yml       # Docker Compose config
+├── casaos.yml              # CasaOS manifest
+├── config/                  # Configuration files
+├── templates/               # HTML templates
+│   ├── index.html          # Landing page
+│   ├── chat.html           # Chat interface
+│   └── admin.html          # Admin panel
+├── static/                  # CSS, JavaScript
+│   ├── style.css
+│   ├── chat.js
+│   └── admin.js
+├── README.md               # This file
+├── DEPLOYMENT_GUIDE.md     # Deployment instructions
+└── CASAOS_INTEGRATION.md   # CasaOS integration
 ```
 
-## License
+### Running Locally
 
-Same as main Neighborhood_BBS project (see root LICENSE)
+```bash
+# Install Python packages
+pip3 install -r requirements.txt
+
+# Initialize database
+python3 -c "from app import init_db; init_db()"
+
+# Run Flask development server
+python3 app.py
+
+# Access at: http://localhost:5000
+```
+
+---
 
 ## Support
 
-See main project docs:
-- [LOCAL_SETUP.md](../../LOCAL_SETUP.md) - development
-- [SECURITY.md](../../SECURITY.md) - security guidelines
-- [ROADMAP.md](../../ROADMAP.md) - future plans
+- 📚 **Documentation**: [https://github.com/Gh0stlyKn1ght/Neighborhood_BBS](https://github.com/Gh0stlyKn1ght/Neighborhood_BBS)
+- 🐛 **Issues**: [https://github.com/Gh0stlyKn1ght/Neighborhood_BBS/issues](https://github.com/Gh0stlyKn1ght/Neighborhood_BBS/issues)
+- 💬 **Discussions**: [https://github.com/Gh0stlyKn1ght/Neighborhood_BBS/discussions](https://github.com/Gh0stlyKn1ght/Neighborhood_BBS/discussions)
+
+---
+
+**Last Updated**: March 2026  
+**Version**: 1.0.0  
+**Status**: Production Ready

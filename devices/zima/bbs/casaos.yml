@@ -1,0 +1,103 @@
+name: Neighborhood BBS
+description: Local WiFi bulletin board system with captive portal and live chat
+version: 1.0.0
+category: network
+icon: https://raw.githubusercontent.com/Gh0stlyKn1ght/Neighborhood_BBS/main/logo_base64.txt
+
+developer:
+  name: Gh0stlyKn1ght
+  url: https://github.com/Gh0stlyKn1ght/Neighborhood_BBS
+
+support:
+  url: https://github.com/Gh0stlyKn1ght/Neighborhood_BBS/issues
+
+source_code: https://github.com/Gh0stlyKn1ght/Neighborhood_BBS
+
+screenshots:
+  - https://raw.githubusercontent.com/Gh0stlyKn1ght/Neighborhood_BBS/main/images/bbs-interface.png
+  - https://raw.githubusercontent.com/Gh0stlyKn1ght/Neighborhood_BBS/main/images/admin-panel.png
+
+services:
+  neighborhood-bbs:
+    name: Neighborhood BBS
+    image: ghcr.io/gh0stlykn1ght/neighborhood-bbs:latest
+    restart_policy: unless_stopped
+    environment:
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-gh0stly}
+      - FLASK_ENV=production
+      - LISTEN_PORT=5000
+    ports:
+      - target: 5000
+        published: ${APP_PORT:-5000}
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: bbs_data
+        target: /app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  bbs_data:
+
+tags:
+  - network
+  - communication
+  - bbs
+  - bulletin-board
+  - wifi
+  - captive-portal
+  - mesh-network
+
+docs: |
+  ## Neighborhood BBS
+  
+  A local-network bulletin board system designed to run on ZimaBoard or any Docker-enabled device.
+  
+  ### Features
+  - 📡 **Captive Portal**: Auto-detect when connecting to WiFi
+  - 💬 **Live Chat**: Real-time WebSocket messaging
+  - 📋 **Persistent Bulletins**: Survive reboots
+  - 👨‍💼 **Admin Panel**: Manage content and users
+  - 🔐 **Rate Limited**: Prevent spam (5 msgs/10s)
+  - 🌍 **Mesh Ready**: Works with multiple WiFi nodes
+  
+  ### Access
+  1. Connect to WiFi: `NEIGHBORHOOD_BBS`
+  2. Open browser (should auto-redirect)
+  3. Or manually visit: `http://192.168.x.x:5000`
+  
+  ### Admin Panel
+  - Default username: `sysop`
+  - Default password: `gh0stly` (change in settings!)
+  - Access: `http://192.168.x.x:5000/admin`
+  
+  ### Configuration
+  - Set custom admin password in app settings
+  - Upload custom WiFi hotspot name
+  - Configure message retention policy
+  
+  ### Support
+  - Documentation: https://github.com/Gh0stlyKn1ght/Neighborhood_BBS
+  - Issues: https://github.com/Gh0stlyKn1ght/Neighborhood_BBS/issues
+
+require_arch:
+  - amd64
+  - arm64
+  - armv7
+
+tips: |
+  💡 **Tips for best experience:**
+  
+  1. **WiFi Range**: Use a USB WiFi adapter (Alfa AWUS036ACM) for 200-500m range
+  2. **Multiple Nodes**: Run multiple instances with different SSIDs or use mesh networking
+  3. **Persistent Data**: Database persists in Docker volume even after container restart
+  4. **Admin Password**: Change default password immediately in settings
+  5. **Firewall**: If on public network, restrict access to admin panel
+
+ports:
+  - 5000/tcp

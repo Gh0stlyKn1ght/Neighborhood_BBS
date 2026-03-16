@@ -441,6 +441,32 @@ def ws_handler(ws):
         connected_clients.discard(ws)
 
 
+@app.route('/health')
+def health():
+    """Health check endpoint for monitoring/Docker."""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM messages")
+        msg_count = c.fetchone()[0]
+        c.execute("SELECT COUNT(*) FROM bulletins")
+        bulletin_count = c.fetchone()[0]
+        conn.close()
+        
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'messages': msg_count,
+            'bulletins': bulletin_count,
+            'clients': len(connected_clients)
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e)
+        }), 500
+
+
 @app.errorhandler(404)
 def not_found(e):
     """Captive portal redirect for 404s."""
