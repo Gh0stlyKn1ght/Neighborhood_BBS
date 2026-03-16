@@ -23,10 +23,25 @@ import urequests
 import json
 import time
 import os
+import re
 
 # Load configuration from file
 CONFIG_FILE = "config.json"
 TOKEN_FILE = "token.json"
+
+# Security constraints
+MAX_MESSAGE_LENGTH = 5000
+MAX_DEVICE_NAME_LENGTH = 64
+MAX_USERNAME_LENGTH = 50
+MAX_PASSWORD_LENGTH = 255
+MAX_EMAIL_LENGTH = 255
+MAX_TIMEOUT = 60
+MIN_TIMEOUT = 1
+MAX_RECONNECT_INTERVAL = 3600
+MIN_RECONNECT_INTERVAL = 10
+MAX_RESPONSE_SIZE = 50000  # Prevent buffer overflow (in bytes)
+MAX_RECURSION_DEPTH = 3
+
 DEFAULT_CONFIG = {
     "ssid": "Your_WiFi_SSID",
     "password": "Your_WiFi_Password",
@@ -41,28 +56,220 @@ DEFAULT_CONFIG = {
     "user_password": "YourPassword123"
 }
 
+class SecurityValidator:
+    """Validate and sanitize inputs for security"""
+    
+    @staticmethod
+    def validate_room_id(room_id):
+        """Validate room_id is a positive integer"""
+        if not isinstance(room_id, int) or room_id <= 0:
+            raise ValueError("Room ID must be positive integer")
+        if room_id > 65535:
+            raise ValueError("Room ID too large")
+        return room_id
+    
+    @staticmethod
+    def validate_message(message):
+        """Validate message content and sanitize for XSS"""
+        if not isinstance(message, str):
+            raise TypeError("Message must be string")
+        if not message or len(message) == 0:
+            raise ValueError("Message cannot be empty")
+        if len(message) > MAX_MESSAGE_LENGTH:
+            raise ValueError("Message too long (max {})".format(MAX_MESSAGE_LENGTH))
+        # Basic HTML entity encoding to prevent XSS
+        sanitized = SecurityValidator._html_encode(message)
+        return sanitized
+    
+    @staticmethod
+    def validate_device_name(name):
+        """Validate device name"""
+        if not isinstance(name, str) or not name:
+            raise ValueError("Device name must be non-empty string")
+        if len(name) > MAX_DEVICE_NAME_LENGTH:
+            raise ValueError("Device name too long")
+        # Allow alphanumeric, underscore, hyphen only
+        if not re.match(r'^[a-zA-Z0-9_-]+$', name):
+            raise ValueError("Device name contains invalid characters")
+        return name
+    
+    @staticmethod
+    def validate_username(username):
+        """Validate username format"""
+        if not isinstance(username, str) or not username:
+            raise ValueError("Username must be non-empty string")
+        if len(username) < 3 or len(username) > MAX_USERNAME_LENGTH:
+            raise ValueError("Username length must be 3-{}".format(MAX_USERNAME_LENGTH))
+        # Allow alphanumeric, underscore, hyphen only
+        if not re.match(r'^[a-zA-Z0-9_-]+$', username):
+            raise ValueError("Username contains invalid characters")
+        return username
+    
+    @staticmethod
+    def validate_password(password):
+        """Validate password strength"""
+        if not isinstance(password, str) or not password:
+            raise ValueError("Password must be non-empty string")
+        if len(password) < 8 or len(password) > MAX_PASSWORD_LENGTH:
+            raise ValueError("Password length must be 8-{}".format(MAX_PASSWORD_LENGTH))
+        return password
+    
+    @staticmethod
+    def validate_email(email):
+        """Validate email format"""
+        if not isinstance(email, str) or not email:
+            raise ValueError("Email must be non-empty string")
+        if len(email) > MAX_EMAIL_LENGTH:
+            raise ValueError("Email too long")
+        # Basic email validation
+        if not re.match(r'^[^@]+@[^@]+\.[^@]+$', email):
+            raise ValueError("Invalid email format")
+        return email
+    
+    @staticmethod
+    def validate_timeout(timeout):
+        """Validate timeout value"""
+        if not isinstance(timeout, (int, float)):
+            raise TypeError("Timeout must be number")
+        if timeout < MIN_TIMEOUT or timeout > MAX_TIMEOUT:
+            raise ValueError("Timeout must be {}-{}".format(MIN_TIMEOUT, MAX_TIMEOUT))
+        return int(timeout)
+    
+    @staticmethod
+    def validate_reconnect_interval(interval):
+        """Validate reconnect interval"""
+        if not isinstance(interval, (int, float)):
+            raise TypeError("Reconnect interval must be number")
+        if interval < MIN_RECONNECT_INTERVAL or interval > MAX_RECONNECT_INTERVAL:
+            raise ValueError("Reconnect interval must be {}-{}".format(
+                MIN_RECONNECT_INTERVAL, MAX_RECONNECT_INTERVAL))
+        return int(interval)
+    
+    @staticmethod
+    def validate_limit(limit):
+        """Validate message limit parameter"""
+        if not isinstance(limit, int):
+            raise TypeError("Limit must be integer")
+        if limit <= 0 or limit > 100:
+            raise ValueError("Limit must be 1-100")
+        return limit
+    
+    @staticmethod
+    def _html_encode(text):
+        """Basic HTML entity encoding for XSS prevention"""
+        replacements = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }
+        result = text
+        for char, entity in replacements.items():
+            result = result.replace(char, entity)
+        return result
+
+class RateLimiter:
+    """Handle exponential backoff for rate limiting"""
+    
+    def __init__(self, max_backoff=300):
+        self.last_rate_limit = 0
+        self.backoff_time = 1
+        self.max_backoff = max_backoff
+    
+    def on_rate_limit(self):
+        """Record rate limit hit and calculate backoff time"""
+        self.last_rate_limit = time.time()
+        print("Rate limited. Waiting {}s before retry...".format(self.backoff_time))
+        return self.backoff_time
+    
+    def should_retry(self):
+        """Check if enough time has passed since last rate limit"""
+        if self.last_rate_limit == 0:
+            return True
+        elapsed = time.time() - self.last_rate_limit
+        if elapsed >= self.backoff_time:
+            # Exponential backoff: double the wait time, cap at max
+            self.backoff_time = min(self.backoff_time * 2, self.max_backoff)
+            self.last_rate_limit = 0
+            return True
+        return False
+    
+    def reset(self):
+        """Reset rate limiter after success"""
+        self.last_rate_limit = 0
+        self.backoff_time = 1
+
 class ConfigManager:
     """Load and manage configuration from file"""
+    
     @staticmethod
     def load():
-        """Load configuration from file or use defaults"""
+        """Load configuration from file or use defaults with validation"""
         try:
             if CONFIG_FILE in os.listdir():
                 with open(CONFIG_FILE, 'r') as f:
-                    return json.load(f)
+                    config = json.load(f)
+                    # Validate all config values
+                    return ConfigManager._validate_config(config)
         except Exception as e:
-            print(f"Error loading config: {e}")
+            print("Error loading config: {}".format(e))
         return DEFAULT_CONFIG
+
+    @staticmethod
+    def _validate_config(config):
+        """Validate all configuration parameters"""
+        try:
+            # Validate device name
+            if "device_name" in config:
+                config["device_name"] = SecurityValidator.validate_device_name(
+                    config["device_name"])
+            
+            # Validate timeout
+            if "timeout" in config:
+                config["timeout"] = SecurityValidator.validate_timeout(
+                    config["timeout"])
+            
+            # Validate reconnect interval
+            if "reconnect_interval" in config:
+                config["reconnect_interval"] = SecurityValidator.validate_reconnect_interval(
+                    config["reconnect_interval"])
+            
+            # Validate auth fields
+            if "username" in config and config["username"]:
+                config["username"] = SecurityValidator.validate_username(
+                    config["username"])
+            
+            if "user_password" in config and config["user_password"]:
+                config["user_password"] = SecurityValidator.validate_password(
+                    config["user_password"])
+            
+            if "email" in config and config["email"]:
+                config["email"] = SecurityValidator.validate_email(
+                    config["email"])
+            
+            # Ensure port is valid
+            if "server_port" in config:
+                port = config["server_port"]
+                if not isinstance(port, int) or port <= 0 or port > 65535:
+                    raise ValueError("Invalid server port")
+            
+            return config
+        except Exception as e:
+            print("Config validation error: {}. Using defaults.".format(e))
+            return DEFAULT_CONFIG
 
     @staticmethod
     def save(config):
         """Save configuration to file"""
         try:
+            # Validate before saving
+            config = ConfigManager._validate_config(config)
             with open(CONFIG_FILE, 'w') as f:
                 json.dump(config, f)
             print("Config saved")
         except Exception as e:
-            print(f"Error saving config: {e}")
+            print("Error saving config: {}".format(e))
 
 class NeighborhoodBBSClient:
     """ESP8266 client for Neighborhood BBS with optional user authentication"""
@@ -78,6 +285,8 @@ class NeighborhoodBBSClient:
         self.wifi = network.WLAN(network.STA_IF)
         self.request_count = 0
         self.last_heartbeat = 0
+        self.rate_limiter = RateLimiter()
+        self._auth_retry_count = 0  # Prevent infinite recursion on auth failure
         
         # Load token from file if using user auth
         if self.auth_mode == "user":
@@ -143,6 +352,14 @@ class NeighborhoodBBSClient:
             return False
 
         try:
+            # Validate credentials format
+            username = SecurityValidator.validate_username(username)
+            password = SecurityValidator.validate_password(password)
+        except (ValueError, TypeError) as e:
+            print("Input validation error: {}".format(e))
+            return False
+
+        try:
             url = self._build_url("/api/user/login")
             data = {
                 "username_or_email": username,
@@ -159,6 +376,13 @@ class NeighborhoodBBSClient:
             )
 
             if response.status_code == 200:
+                # Buffer overflow protection
+                response_size = len(response.content) if hasattr(response, 'content') else 0
+                if response_size > MAX_RESPONSE_SIZE:
+                    print("Error: Response too large")
+                    response.close()
+                    return False
+                
                 result = response.json()
                 self.auth_token = result.get("token")
                 self.username = result.get("username")
@@ -198,6 +422,15 @@ class NeighborhoodBBSClient:
             return False
 
         try:
+            # Validate credentials and email
+            username = SecurityValidator.validate_username(username)
+            password = SecurityValidator.validate_password(password)
+            email = SecurityValidator.validate_email(email)
+        except (ValueError, TypeError) as e:
+            print("Input validation error: {}".format(e))
+            return False
+
+        try:
             url = self._build_url("/api/user/register")
             data = {
                 "username": username,
@@ -216,6 +449,13 @@ class NeighborhoodBBSClient:
             )
 
             if response.status_code == 201:
+                # Buffer overflow protection
+                response_size = len(response.content) if hasattr(response, 'content') else 0
+                if response_size > MAX_RESPONSE_SIZE:
+                    print("Error: Response too large")
+                    response.close()
+                    return False
+                
                 result = response.json()
                 self.auth_token = result.get("token")
                 self.username = result.get("username")
@@ -302,8 +542,17 @@ class NeighborhoodBBSClient:
             print("Error: Not connected to WiFi")
             return False
 
-        if not message or len(message) > 5000:
-            print("Error: Message invalid (empty or too long)")
+        try:
+            # Validate input parameters
+            room_id = SecurityValidator.validate_room_id(room_id)
+            message = SecurityValidator.validate_message(message)
+        except (ValueError, TypeError) as e:
+            print("Input validation error: {}".format(e))
+            return False
+
+        # Check rate limiter
+        if not self.rate_limiter.should_retry():
+            print("Rate limited. Skipping message send.")
             return False
 
         try:
@@ -314,7 +563,7 @@ class NeighborhoodBBSClient:
                 return self._send_message_anonymous(room_id, message, author)
 
         except Exception as e:
-            print(f"Error sending message: {e}")
+            print("Error sending message: {}".format(e))
             return False
 
     def _send_message_authenticated(self, room_id, message):
@@ -343,17 +592,26 @@ class NeighborhoodBBSClient:
                     result.get("message_id")
                 ))
                 self.request_count += 1
+                self.rate_limiter.reset()  # Success: reset rate limiter
                 response.close()
                 return True
             elif response.status_code == 401:
                 print("Error: Token expired or invalid. Re-authenticating...")
                 response.close()
+                # Prevent infinite recursion on auth failure
+                if self._auth_retry_count >= MAX_RECURSION_DEPTH:
+                    print("Max re-authentication attempts reached")
+                    return False
                 # Try to refresh token
+                self._auth_retry_count += 1
                 if self.login():
+                    self._auth_retry_count = 0
                     return self._send_message_authenticated(room_id, message)
+                self._auth_retry_count = 0
                 return False
             elif response.status_code == 429:
-                print("Error: Rate limit exceeded. Wait before sending more messages.")
+                # Rate limit: use exponential backoff
+                backoff = self.rate_limiter.on_rate_limit()
                 response.close()
                 return False
             else:
@@ -362,13 +620,16 @@ class NeighborhoodBBSClient:
                 return False
 
         except Exception as e:
-            print(f"Error sending authenticated message: {e}")
+            print("Error sending authenticated message: {}".format(e))
             return False
 
     def _send_message_anonymous(self, room_id, message, author=None):
         """Send message using anonymous endpoint"""
         try:
             author = author or self.device_name
+            # Validate author name
+            author = SecurityValidator.validate_device_name(author)
+            
             url = self._build_url("/api/chat/send-message")
 
             data = {
@@ -389,10 +650,12 @@ class NeighborhoodBBSClient:
             if response.status_code == 201:
                 print("Message sent from {}".format(author))
                 self.request_count += 1
+                self.rate_limiter.reset()  # Success: reset rate limiter
                 response.close()
                 return True
             elif response.status_code == 429:
-                print("Error: Rate limit exceeded. Wait before sending more messages.")
+                # Rate limit: use exponential backoff
+                backoff = self.rate_limiter.on_rate_limit()
                 response.close()
                 return False
             else:
@@ -400,8 +663,11 @@ class NeighborhoodBBSClient:
                 response.close()
                 return False
 
+        except (ValueError, TypeError) as e:
+            print("Input validation error: {}".format(e))
+            return False
         except Exception as e:
-            print(f"Error sending anonymous message: {e}")
+            print("Error sending anonymous message: {}".format(e))
             return False
 
     def get_messages(self, room_id, limit=50):
@@ -410,8 +676,13 @@ class NeighborhoodBBSClient:
             print("Error: Not connected to WiFi")
             return []
 
-        # Enforce API limits (max 100)
-        limit = min(limit, 100)
+        try:
+            # Validate input parameters
+            room_id = SecurityValidator.validate_room_id(room_id)
+            limit = SecurityValidator.validate_limit(limit)
+        except (ValueError, TypeError) as e:
+            print("Input validation error: {}".format(e))
+            return []
 
         try:
             # Use authenticated endpoint if user mode and token available
@@ -440,24 +711,39 @@ class NeighborhoodBBSClient:
             )
 
             if response.status_code == 200:
+                # Buffer overflow protection: check response size
+                response_size = len(response.content) if hasattr(response, 'content') else 0
+                if response_size > MAX_RESPONSE_SIZE:
+                    print("Error: Response too large ({} bytes)".format(response_size))
+                    response.close()
+                    return []
+                
                 data = response.json()
                 messages = data.get("messages", [])
                 self.request_count += 1
+                self.rate_limiter.reset()
                 response.close()
                 return messages
             elif response.status_code == 401:
                 print("Error: Token expired or invalid. Re-authenticating...")
                 response.close()
+                # Prevent infinite recursion
+                if self._auth_retry_count >= MAX_RECURSION_DEPTH:
+                    print("Max re-authentication attempts reached")
+                    return []
                 # Try to refresh token
+                self._auth_retry_count += 1
                 if self.login():
+                    self._auth_retry_count = 0
                     return self._get_messages_authenticated(room_id, limit)
+                self._auth_retry_count = 0
                 return []
             elif response.status_code == 404:
                 print("Error: Room {} not found".format(room_id))
                 response.close()
                 return []
             elif response.status_code == 429:
-                print("Error: Rate limit exceeded. Wait before requesting more messages.")
+                backoff = self.rate_limiter.on_rate_limit()
                 response.close()
                 return []
             else:
@@ -483,9 +769,17 @@ class NeighborhoodBBSClient:
             )
 
             if response.status_code == 200:
+                # Buffer overflow protection: check response size
+                response_size = len(response.content) if hasattr(response, 'content') else 0
+                if response_size > MAX_RESPONSE_SIZE:
+                    print("Error: Response too large ({} bytes)".format(response_size))
+                    response.close()
+                    return []
+                
                 data = response.json()
                 messages = data.get("messages", [])
                 self.request_count += 1
+                self.rate_limiter.reset()
                 response.close()
                 return messages
             elif response.status_code == 404:
@@ -493,7 +787,7 @@ class NeighborhoodBBSClient:
                 response.close()
                 return []
             elif response.status_code == 429:
-                print("Error: Rate limit exceeded. Wait before requesting more messages.")
+                backoff = self.rate_limiter.on_rate_limit()
                 response.close()
                 return []
             else:
