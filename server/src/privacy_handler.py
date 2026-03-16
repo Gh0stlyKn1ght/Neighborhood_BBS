@@ -23,18 +23,19 @@ class PrivacyModeHandler:
     _message_storage = defaultdict(list)
     _storage_lock = Lock()
     
-    def __init__(self, privacy_mode='full_privacy'):
+    def __init__(self, privacy_mode='full_privacy', db=None):
         """
         Initialize handler with privacy mode
         
         Args:
             privacy_mode: 'full_privacy', 'hybrid', or 'persistent'
+            db: Optional Database instance (for testing); defaults to main database
         """
         if privacy_mode not in ['full_privacy', 'hybrid', 'persistent']:
             raise ValueError(f"Invalid privacy mode: {privacy_mode}")
         
         self.privacy_mode = privacy_mode
-        self.db = Database()
+        self.db = db if db is not None else Database()
     
     @staticmethod
     def get_current_mode():

@@ -9,6 +9,7 @@ from session_manager import SessionManager
 from privacy_handler import PrivacyModeHandler
 from mode_helper import ModeHelper
 from moderation_service import ModerationService
+from services.message_persistence_service import get_message_persistence_service
 from models import ChatRoom, Database
 from datetime import datetime
 import logging
@@ -18,8 +19,12 @@ logger = logging.getLogger(__name__)
 
 chat_bp = Blueprint('chat', __name__, url_prefix='/api/chat')
 
-# Initialize privacy handler based on mode
+# Initialize services
 privacy_handler = PrivacyModeHandler(ModeHelper.get_privacy_mode())
+persistence_service = get_message_persistence_service()
+
+# Track session_id to socket_id mapping for disconnect cleanup
+_session_socket_mapping = {}
 
 
 @chat_bp.route('/rooms', methods=['GET'])
@@ -152,6 +157,98 @@ def send_message():
         return jsonify({'error': 'Failed to send message'}), 500
 
 
+@chat_bp.route('/privacy-info', methods=['GET'])
+@limiter.limit("60/minute")
+def get_privacy_info():
+    """
+    Get information about message privacy mode and storage
+    
+    Returns:
+    - privacy_mode: Full description of current mode
+    - message_retention: How long messages are kept
+    - storage_location: Where messages are stored
+    - statistics: Message count and cleanup info
+    """
+    try:
+        stats = persistence_service.get_statistics()
+        
+        mode = persistence_service.get_privacy_mode()
+        
+        if mode == 'full_privacy':
+            privacy_description = {
+                'mode': 'FULL_PRIVACY',
+                'description': 'Maximum privacy: messages stored in RAM only',
+                'message_retention': 'Session-based (deleted on disconnect)',
+                'storage_location': 'In-memory only (not persisted)',
+                'tracking': 'None - no session linking to messages',
+                'use_case': 'Communities prioritizing privacy over history'
+            }
+        
+        elif mode == 'hybrid':
+            privacy_description = {
+                'mode': 'HYBRID',
+                'description': 'Balanced: messages persist for 7 days then auto-delete',
+                'message_retention': '7 days (then automatic deletion)',
+                'storage_location': 'Persistent database',
+                'tracking': 'No user IDs - only nickname + timestamp',
+                'use_case': 'Communities needing some history but prefer privacy'
+            }
+        
+        elif mode == 'persistent':
+            privacy_description = {
+                'mode': 'PERSISTENT',
+                'description': 'All messages saved permanently (requires privacy agreement)',
+                'message_retention': 'Permanent',
+                'storage_location': 'Persistent database',
+                'tracking': 'Full message history available',
+                'use_case': 'Q&A, support, or documentation communities'
+            }
+        
+        else:
+            privacy_description = {'error': 'Unknown privacy mode'}
+        
+        return jsonify({
+            'privacy_info': privacy_description,
+            'statistics': stats
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting privacy info: {e}")
+        return jsonify({'error': 'Failed to get privacy info'}), 500
+
+
+@chat_bp.route('/messages/statistics', methods=['GET'])
+@limiter.limit("30/minute")
+def get_message_statistics():
+    """
+    Get message storage statistics
+    
+    Query params:
+    - room_id: Optional room ID to filter by
+    
+    Returns message count and retention info based on privacy mode
+    """
+    try:
+        room_id = request.args.get('room_id', type=int)
+        
+        stats = persistence_service.get_statistics()
+        mode = persistence_service.get_privacy_mode()
+        
+        # Add mode-specific stats
+        message_count = persistence_service.get_message_count(room_id)
+        
+        return jsonify({
+            'privacy_mode': mode,
+            'message_count': message_count,
+            'statistics': stats,
+            'room_filter': room_id
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting message statistics: {e}")
+        return jsonify({'error': 'Failed to get statistics'}), 500
+
+
 # WebSocket events for real-time chat
 
 @socketio.on('join_room')
@@ -169,6 +266,10 @@ def on_join_room(data):
         
         nickname = session['nickname']
         room_name = f"room_{room_id}"
+        
+        # Track session to socket mapping for disconnect cleanup
+        from flask_socketio import request as socketio_request
+        _session_socket_mapping[socketio_request.sid] = session_id
         
         # Join SocketIO room
         join_room(room_name)
@@ -370,9 +471,20 @@ def on_leave_room(data):
 
 @socketio.on('disconnect')
 def on_disconnect():
-    """WebSocket: User disconnected"""
+    """WebSocket: User disconnected - clean up messages in full privacy mode"""
     try:
-        logger.debug("User disconnected from WebSocket")
+        from flask_socketio import request as socketio_request
+        
+        socket_id = socketio_request.sid
+        session_id = _session_socket_mapping.pop(socket_id, None)
+        
+        if session_id:
+            # Clean up messages for this session (full privacy mode)
+            persistence_service.on_user_disconnect(session_id)
+            logger.info(f"User disconnected: cleaned up session {session_id}")
+        else:
+            logger.debug("User disconnected (no session mapping)")
+    
     except Exception as e:
         logger.error(f"Error in disconnect: {e}")
 
