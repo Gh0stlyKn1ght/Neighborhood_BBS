@@ -102,6 +102,44 @@ python server/src/main.py
 
 **Access the app:** Open your browser to `http://localhost:8080`
 
+## 🎯 Feature Matrix by Device
+
+Each device has different capabilities. Choose the right platform for your needs:
+
+| Feature | ESP8266 | Raspberry Pi | Orange Pi 5 | ZimaBoard | Windows/Linux |
+|---------|---------|--------------|------------|-----------|---------------|
+| **User Features** | | | | | |
+| Chat/Real-time Messaging | ✅ Lite | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
+| User Accounts & Login | ✅ Basic | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
+| Message History | ✅ Limited | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
+| Community Posts/Bulletin | ✅ Lite | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
+| | | | | | |
+| **Moderation** | | | | | |
+| Moderation Tools | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| Access Control | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| Audit Logging | ❌ No | ⚠️ Basic | ✅ Yes | ✅ Yes | ✅ Yes |
+| | | | | | |
+| **Administration** | | | | | |
+| Admin Dashboard | ❌ No | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes |
+| User Management | ❌ No | ✅ Basic | ✅ Full | ✅ Full | ✅ Full |
+| System Analytics | ❌ No | ❌ No | ⚠️ Basic | ✅ Full | ✅ Full |
+| Admin Notifications | ❌ No | ❌ No | ⚠️ Basic | ✅ Full | ✅ Full |
+
+**Legend:**
+- ✅ **Full/Yes** - Feature fully supported and recommended
+- ⚠️ **Basic** - Limited functionality, may be slow
+- ❌ **No** - Not available on this device
+
+### Device Recommendations
+
+| Use Case | Recommended Device | Why |
+|----------|-------------------|-----|
+| Single person/hobbyist testing | **ESP8266** | Cheap ($5-15), low power, WiFi mesh capable |
+| Small neighborhood (5-50 people) | **Raspberry Pi 4/5** | Good balance of cost and performance |
+| Medium community (50-200 people) | **Orange Pi 5** | Better performance than RPi, good value |
+| Large deployment + admin needs | **ZimaBoard** | Full features, high reliability, professional setup |
+| Development/Testing | **Windows/Linux** | Easy debugging, native development tools |
+
 ## 📁 Project Structure
 
 ```
