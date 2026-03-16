@@ -369,7 +369,244 @@ body {
     color: #666;
 }
 
-/** Responsive **/
+/** ========== NOTIFICATIONS ========== **/
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ff4444;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#notificationBadge {
+    display: none;
+}
+
+.notifications-container {
+    position: relative;
+}
+
+.notification-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    width: 400px;
+    max-height: 500px;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: none;
+}
+
+.notification-dropdown.show {
+    display: block;
+}
+
+.notification-dropdown-header {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f9f9f9;
+}
+
+.notification-dropdown-header h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.notification-dropdown-header button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #666;
+}
+
+.notifications-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    transition: background 0.2s;
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-item.unread {
+    background: #f0f4ff;
+}
+
+.notification-item:hover {
+    background: #f9f9f9;
+}
+
+.notification-item.unread:hover {
+    background: #e8ecff;
+}
+
+.notification-item.severity-critical {
+    border-left: 4px solid #ff4444;
+}
+
+.notification-item.severity-warning {
+    border-left: 4px solid #ffaa00;
+}
+
+.notification-item.severity-info {
+    border-left: 4px solid #667eea;
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.notification-title {
+    font-weight: bold;
+    color: #333;
+    flex: 1;
+}
+
+.notification-time {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+    margin-left: 10px;
+}
+
+.notification-message {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+.notification-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.btn-small:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.no-notifications {
+    padding: 30px 15px;
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+}
+
+/** Toast Notifications **/
+
+.toast-container {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.notification-toast {
+    background: white;
+    border-radius: 5px;
+    padding: 15px;
+    min-width: 300px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.notification-toast.notification-critical {
+    border-left: 4px solid #ff4444;
+}
+
+.notification-toast.notification-warning {
+    border-left: 4px solid #ffaa00;
+}
+
+.notification-toast.notification-info {
+    border-left: 4px solid #667eea;
+}
+
+.toast-content {
+    flex: 1;
+}
+
+.toast-content strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.toast-content p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    color: #999;
+    transition: color 0.2s;
+}
+
+.toast-close:hover {
+    color: #333;
+}
+
+/** ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .analytics-grid {
         grid-template-columns: 1fr;
