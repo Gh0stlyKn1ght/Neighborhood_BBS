@@ -11,6 +11,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+
 echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║  Neighborhood BBS - Raspberry Pi Setup ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
@@ -48,50 +51,80 @@ sudo apt-get install -y \
 
 # 4. Clone repository
 echo -e "${YELLOW}[4/8]${NC} Cloning Neighborhood BBS..."
-if [ -d "Neighborhood_BBS" ]; then
-    echo -e "${YELLOW}Directory already exists, skipping clone${NC}"
+if [ -f "$REPO_ROOT/server/src/main.py" ] && [ -f "$REPO_ROOT/requirements.txt" ]; then
+    echo -e "${GREEN}Using existing repository at: $REPO_ROOT${NC}"
 else
-    git clone https://github.com/Gh0stlyKn1ght/Neighborhood_BBS.git
+    TARGET_DIR="$HOME/Neighborhood_BBS"
+    if [ -d "$TARGET_DIR" ]; then
+        echo -e "${YELLOW}Directory already exists, using: $TARGET_DIR${NC}"
+    else
+        git clone https://github.com/Gh0stlyKn1ght/Neighborhood_BBS.git "$TARGET_DIR"
+    fi
+    REPO_ROOT="$TARGET_DIR"
 fi
 
-cd Neighborhood_BBS
+cd "$REPO_ROOT"
 
 # 5. Create virtual environment
 echo -e "${YELLOW}[5/8]${NC} Creating Python virtual environment..."
-python3 -m venv venv
+if [ ! -d "venv" ]; then
+    python3 -m venv venv
+fi
 source venv/bin/activate
 
 # 6. Install Python dependencies
 echo -e "${YELLOW}[6/8]${NC} Installing Python packages..."
 pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt
+if [ -f "$REPO_ROOT/devices/raspberry-pi/requirements.txt" ]; then
+    pip install -r "$REPO_ROOT/devices/raspberry-pi/requirements.txt"
+else
+    pip install -r "$REPO_ROOT/requirements.txt"
+fi
 
 # 7. Initialize database
 echo -e "${YELLOW}[7/8]${NC} Initializing database..."
-python server/scripts/init_db.py
+python "$REPO_ROOT/server/scripts/init_db.py"
+
+# Ensure env file exists for systemd EnvironmentFile
+if [ -f "$REPO_ROOT/devices/raspberry-pi/config/config.env.example" ] && [ ! -f "$REPO_ROOT/devices/raspberry-pi/config/.env" ]; then
+    cp "$REPO_ROOT/devices/raspberry-pi/config/config.env.example" "$REPO_ROOT/devices/raspberry-pi/config/.env"
+    echo -e "${YELLOW}Created devices/raspberry-pi/config/.env from example. Review before production use.${NC}"
+fi
 
 # 8. Create systemd service
 echo -e "${YELLOW}[8/8]${NC} Installing systemd service..."
-sudo tee /etc/systemd/system/neighborhood-bbs.service > /dev/null << EOF
+SERVICE_TEMPLATE="$REPO_ROOT/devices/raspberry-pi/systemd/neighborhood-bbs.service"
+SERVICE_DEST="/etc/systemd/system/neighborhood-bbs.service"
+PRIMARY_GROUP="$(id -gn "$USER")"
+
+if [ -f "$SERVICE_TEMPLATE" ]; then
+    sed "s|/home/pi/Neighborhood_BBS|$REPO_ROOT|g; s|User=pi|User=$USER|g; s|Group=pi|Group=$PRIMARY_GROUP|g" \
+        "$SERVICE_TEMPLATE" | sudo tee "$SERVICE_DEST" > /dev/null
+else
+    sudo tee "$SERVICE_DEST" > /dev/null << EOF
 [Unit]
 Description=Neighborhood BBS
-After=network.target
+After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=$USER
-WorkingDirectory=$HOME/Neighborhood_BBS
-Environment="PATH=$HOME/Neighborhood_BBS/venv/bin"
-ExecStart=$HOME/Neighborhood_BBS/venv/bin/python server/src/main.py
+Group=$PRIMARY_GROUP
+WorkingDirectory=$REPO_ROOT
+EnvironmentFile=-$REPO_ROOT/devices/raspberry-pi/config/.env
+Environment="PATH=$REPO_ROOT/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=$REPO_ROOT/venv/bin/python server/src/main.py
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
+SyslogIdentifier=neighborhood-bbs
 
 [Install]
 WantedBy=multi-user.target
 EOF
+fi
 
 sudo systemctl daemon-reload
 sudo systemctl enable neighborhood-bbs
@@ -112,6 +145,6 @@ echo "4. Access the application:"
 echo -e "   ${YELLOW}http://raspberrypi.local:8080${NC}"
 echo ""
 echo -e "${BLUE}Optional: Configure Nginx reverse proxy${NC}"
-echo "See firmware/raspberry-pi/README.md for details"
+echo "See devices/raspberry-pi/docs/README.md for details"
 echo ""
 echo -e "${GREEN}Happy serving! 🏘️${NC}"

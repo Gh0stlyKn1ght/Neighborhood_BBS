@@ -112,13 +112,12 @@ devices/raspberry-pi/
 
 ```
 devices/zima/
-├── scripts/          # Zima-specific scripts
-│   └── *.sh
-├── config/           # Configuration files
-│   └── *.conf
-├── docs/             # Zima documentation
-│   └── README.md     # Zima-specific setup
-└── [other assets]
+└── bbs/              # Zima deployment bundle
+    ├── app.py        # Flask app entrypoint
+    ├── start.sh      # One-command deployment
+    ├── bbs.service   # Systemd unit
+    ├── Dockerfile    # Optional container path
+    └── templates/    # UI templates
 ```
 
 **Purpose:** Optimized configuration for Zima Board home servers.
@@ -144,6 +143,25 @@ devices/docker/
 **Purpose:** Container definitions for all platforms.
 
 **Deploy with:** Docker & Docker Compose
+
+---
+
+### Meshtastic - Radio Mesh Bridge
+
+```
+devices/meshtastic/
+├── src/
+│   └── bridge.py                 # Meshtastic <-> BBS bridge daemon
+├── setup.sh                      # Installer and service registration
+├── requirements.txt              # Bridge dependencies
+├── config.json.example           # Bridge configuration template
+└── systemd/
+    └── meshtastic-bridge.service # Systemd unit file
+```
+
+**Purpose:** Relay messages between LoRa mesh and the BBS room.
+
+**Deploy with:** Python + systemd
 
 ---
 
@@ -182,11 +200,11 @@ docs/
 
 After reorganization, imports follow this pattern:
 
-**From within server:**
+**From within server/src:**
 ```python
-from src.models import User
-from src.chat.routes import chat_bp
-from src.admin.auth import admin_required
+from models import User
+from chat.routes import chat_bp
+from admin.auth import admin_required
 ```
 
 **From within specific device:**
@@ -202,7 +220,6 @@ from config import SSID
 
 ### Server Only
 ```bash
-cd server
 python src/main.py
 ```
 
@@ -220,8 +237,12 @@ cd devices/esp8266
 
 ### Raspberry Pi
 ```bash
-cd devices/raspberry-pi
-bash scripts/setup.sh
+bash devices/raspberry-pi/scripts/setup.sh
+```
+
+### Meshtastic Bridge
+```bash
+bash devices/meshtastic/setup.sh
 ```
 
 ---

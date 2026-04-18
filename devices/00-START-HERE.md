@@ -123,7 +123,7 @@ downloads/[platform]/
 Neighborhood_BBS/
 ├── devices/
 │   ├── README.md                          ← You are here
-│   ├── 00-DOWNLOADS.md                    ← Files summary
+│   ├── 00-START-HERE.md                   ← Files summary
 │   │
 │   ├── downloads/                         ← DOWNLOAD THESE FILES
 │   │   ├── arduino-esp8266/

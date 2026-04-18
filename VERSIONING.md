@@ -2,6 +2,23 @@
 
 Neighborhood BBS follows [Semantic Versioning 2.0.0](https://semver.org/).
 
+## Release Channels
+
+This repository uses two release channels with Git tags:
+
+- Stable channel: production-ready releases
+   - Tag format: `vMAJOR.MINOR.PATCH`
+   - Example: `v1.4.2`
+- Unstable channel: pre-release builds for testing
+   - Tag format: `vMAJOR.MINOR.PATCH-alpha.N`, `vMAJOR.MINOR.PATCH-beta.N`, or `vMAJOR.MINOR.PATCH-rc.N`
+   - Examples: `v1.5.0-alpha.1`, `v1.5.0-beta.2`, `v1.5.0-rc.1`
+
+Rules:
+
+- Never move or retag an existing version tag.
+- Stable tags only come from validated code on `main`.
+- Unstable tags are marked as pre-releases in GitHub Releases.
+
 ## Version Format
 
 ```
@@ -34,9 +51,14 @@ MAJOR.MINOR.PATCH
    git commit -m "Release: v1.0.0"
    ```
 
-3. Create git tag:
+3. Create git tag (stable):
    ```bash
    git tag -a v1.0.0 -m "Release version 1.0.0"
+   ```
+
+   Or create an unstable pre-release tag:
+   ```bash
+   git tag -a v1.1.0-rc.1 -m "Release candidate 1 for 1.1.0"
    ```
 
 4. Push to GitHub:
@@ -44,7 +66,9 @@ MAJOR.MINOR.PATCH
    git push origin main --tags
    ```
 
-5. (Optional) Create GitHub release with release notes
+5. GitHub Actions publishes a release automatically when a `v*` tag is pushed.
+   - Tags containing `-alpha.`, `-beta.`, or `-rc.` are published as pre-releases.
+   - Stable tags are published as full releases.
 
 ## Next Releases
 

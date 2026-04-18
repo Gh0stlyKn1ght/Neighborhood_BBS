@@ -64,19 +64,19 @@ Access from any device: **http://raspberrypi.local:8080** (or your device's IP)
 
 **Raspberry Pi (Easiest! 🎯)**
 ```bash
-curl https://raw.githubusercontent.com/Gh0stlyKn1ght/Neighborhood_BBS/main/firmware/raspberry-pi/setup.sh | bash
+bash devices/raspberry-pi/scripts/setup.sh
 ```
 
 **Docker (Any Platform)**
 ```bash
-docker-compose -f docker/docker-compose.yml up -d
+docker-compose -f devices/docker/docker-compose.yml up -d
 ```
 
 **Linux Server (Zima, Ubuntu, Debian)**
 See [docs/SETUP.md](docs/SETUP.md)
 
 **Embedded (ESP8266)**
-See [firmware/esp8266/README.md](firmware/esp8266/README.md)
+See [devices/esp8266/docs/README.md](devices/esp8266/docs/README.md)
 
 ## 🚀 Quick Start
 
