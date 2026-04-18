@@ -2,19 +2,28 @@
 Flask application factory and configuration
 """
 
-from flask import Flask, render_template, send_from_directory, request, jsonify, redirect
+from flask import Flask, render_template, send_from_directory, request, jsonify, redirect, session
 from flask_socketio import SocketIO
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
+import hmac
+import secrets
 from pathlib import Path
 
-# Configure CORS origins from environment
-cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:8080').split(',')
-cors_origins = [origin.strip() for origin in cors_origins if origin.strip()]
-
-socketio = SocketIO(cors_allowed_origins=cors_origins)
+socketio = SocketIO()
 limiter = Limiter(key_func=get_remote_address)
+
+# Cache: set True once setup is complete to avoid a DB query on every request
+_setup_complete_cache = False
+
+_INSECURE_DEFAULTS = {
+    'dev-secret-key-change-in-production',
+    'change-me',
+    'secret',
+}
+
+_CSRF_SESSION_KEY = '_csrf_token'
 
 
 def create_app(config_file=None):
@@ -39,24 +48,75 @@ def create_app(config_file=None):
         static_url_path='/static'
     )
     
+    # --- Secrets: fail hard if missing or using known-insecure defaults ---
+    is_production = os.environ.get('FLASK_ENV', 'production').lower() != 'development'
+    secret_key = os.environ.get('SECRET_KEY')
+    if is_production:
+        if not secret_key or secret_key in _INSECURE_DEFAULTS:
+            raise RuntimeError(
+                "SECRET_KEY env var must be set to a cryptographically random value. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+    else:
+        secret_key = secret_key or 'dev-only-not-for-production'
+
+    # Configure CORS origins inside factory so env is fully resolved
+    cors_origins = [
+        o.strip()
+        for o in os.environ.get('CORS_ORIGINS', 'http://localhost:8080').split(',')
+        if o.strip()
+    ]
+
     # Default configuration
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-    app.config['HOST'] = os.environ.get('HOST', '0.0.0.0')
+    app.config['SECRET_KEY'] = secret_key
+    app.config['HOST'] = os.environ.get('HOST', '127.0.0.1')
     app.config['PORT'] = int(os.environ.get('PORT', 8080))
-    app.config['DEBUG'] = os.environ.get('DEBUG', 'false').lower() == 'true'
+    app.config['DEBUG'] = os.environ.get('FLASK_ENV', 'production').lower() == 'development'
     app.config['JSON_SORT_KEYS'] = False
-    
+
     # Session configuration for admin panel
     app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() == 'true'
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
     app.config['PERMANENT_SESSION_LIFETIME'] = int(os.environ.get('ADMIN_SESSION_TIMEOUT', 3600))
-    
+    def _get_or_create_csrf_token():
+        token = session.get(_CSRF_SESSION_KEY)
+        if not token:
+            token = secrets.token_urlsafe(32)
+            session[_CSRF_SESSION_KEY] = token
+        return token
+
+    def _is_csrf_exempt(path):
+        exempt_exact = {
+            '/health',
+            '/api/health',
+            '/api/csrf/token',
+            '/api/auth/join',
+            '/api/auth/admin-login',
+            '/api/user/join',
+            '/api/user/register',
+            '/api/user/login',
+            '/api/auth/validate-passcode',
+            '/api/auth/open-join',
+            '/api/auth/request-approval',
+            '/api/auth/create-approved-session',
+            '/api/access/register',
+            '/api/access/verify-token',
+            '/api/admin/login',
+            '/api/admin-management/login',
+            '/api/admin-management/validate-token',
+        }
+        exempt_prefixes = (
+            '/static/',
+            '/api/setup/',
+        )
+        return path in exempt_exact or path.startswith(exempt_prefixes)
+
     # Max connections
     app.config['MAX_CONNECTIONS'] = int(os.environ.get('MAX_CONNECTIONS', 100))
-    
+
     # Initialize extensions
-    socketio.init_app(app)
+    socketio.init_app(app, cors_allowed_origins=cors_origins)
     limiter.init_app(app)
 
     # Register blueprints
@@ -93,27 +153,47 @@ def create_app(config_file=None):
     # Setup check middleware
     @app.before_request
     def check_setup_required():
-        """Redirect to setup if not complete"""
+        """Redirect to setup if not complete. Cached after first successful check."""
+        global _setup_complete_cache
+        if _setup_complete_cache:
+            return
+
         from setup_config import SetupConfig
-        
-        # Allow these paths without setup
-        allowed_paths = [
-            '/api/setup',
-            '/api/privacy',
-            '/api/user',
-            '/setup',
-            '/static',
-            '/api/health'
-        ]
-        
-        # Check if path is allowed without setup
-        for allowed in allowed_paths:
-            if request.path.startswith(allowed):
-                return
-        
-        # Check if setup is complete
-        if not SetupConfig.is_setup_complete():
-            return redirect('/setup')
+
+        # Exact-match or prefix-match paths allowed before setup completes
+        allowed_exact = {'/setup', '/api/health'}
+        allowed_prefixes = ('/api/setup/', '/api/privacy/', '/api/user/', '/static/')
+
+        if request.path in allowed_exact or request.path.startswith(allowed_prefixes):
+            return
+
+        # Check if setup is complete; cache the result once true
+        if SetupConfig.is_setup_complete():
+            _setup_complete_cache = True
+            return
+
+        return redirect('/setup')
+
+    @app.before_request
+    def csrf_protect():
+        """Enforce CSRF token checks for state-changing HTTP requests."""
+        _get_or_create_csrf_token()
+
+        if request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return
+
+        if _is_csrf_exempt(request.path):
+            return
+
+        expected = session.get(_CSRF_SESSION_KEY)
+        provided = request.headers.get('X-CSRF-Token', '')
+        if not expected or not provided or not hmac.compare_digest(expected, provided):
+            return jsonify({'error': 'CSRF validation failed'}), 403
+
+    @app.route('/api/csrf/token', methods=['GET'])
+    def get_csrf_token():
+        """Return a CSRF token clients must echo in X-CSRF-Token for mutating requests."""
+        return jsonify({'csrf_token': _get_or_create_csrf_token()}), 200
     
     # Route to setup wizard page
     @app.route('/setup')
@@ -137,20 +217,20 @@ def create_app(config_file=None):
         if request.path.startswith('/api/admin') or request.path.startswith('/static') or request.path.startswith('/admin'):
             return
         
-        # Get device identifier from request
-        device_id = request.headers.get('X-Device-ID', request.args.get('device_id'))
+        # Client-supplied device ID is supplemental only — do NOT use query params
+        device_id = request.headers.get('X-Device-ID')
         ip_address = get_remote_address()
-        
+
         # Check if device is banned
         if device_id:
             ban = BannedDevice.get_by_device_id(device_id)
             if ban:
-                return jsonify({'error': 'Device banned', 'reason': ban.get('ban_reason')}), 403
-        
+                return jsonify({'error': 'Access denied'}), 403
+
         # Check if IP is banned
         ban = BannedDevice.get_by_ip(ip_address)
         if ban:
-            return jsonify({'error': 'IP banned', 'reason': ban.get('ban_reason')}), 403
+            return jsonify({'error': 'Access denied'}), 403
 
     # Initialize chat log cleanup scheduler
     def init_chat_log_scheduler():
@@ -181,12 +261,16 @@ def create_app(config_file=None):
     def set_security_headers(response):
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
-        response.headers['X-XSS-Protection'] = '1; mode=block'
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-        # NOTE: 'unsafe-inline' is necessary for inline CSS animations and styles in retro terminal interface
-        # This is acceptable because: (1) All user input is sanitized with bleach, (2) No user content in style attrs
-        # For production with external CSS, use nonce-based CSP: "script-src 'nonce-{random}'"
-        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        # X-XSS-Protection intentionally omitted — deprecated and harmful in IE; modern browsers ignore it
+        if os.environ.get('FLASK_ENV', 'production').lower() != 'development':
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        # TODO: Replace unsafe-inline with nonce-based CSP for script-src
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'"
+        )
         return response
 
     # Error handlers
@@ -214,7 +298,8 @@ def create_app(config_file=None):
         try:
             return render_template('index.html')
         except Exception as e:
-            return {'error': 'Could not load home page', 'detail': str(e)}, 500
+            app.logger.error(f"Could not load home page: {e}", exc_info=True)
+            return {'error': 'Internal server error'}, 500
     
     # Admin panel pages
     @app.route('/admin-login.html')
@@ -223,7 +308,8 @@ def create_app(config_file=None):
         try:
             return render_template('admin-login.html')
         except Exception as e:
-            return {'error': 'Could not load admin login', 'detail': str(e)}, 500
+            app.logger.error(f"Could not load admin login: {e}", exc_info=True)
+            return {'error': 'Internal server error'}, 500
     
     @app.route('/admin/dashboard.html')
     def admin_dashboard_page():
@@ -231,7 +317,8 @@ def create_app(config_file=None):
         try:
             return render_template('admin-dashboard.html')
         except Exception as e:
-            return {'error': 'Could not load admin dashboard', 'detail': str(e)}, 500
+            app.logger.error(f"Could not load admin dashboard: {e}", exc_info=True)
+            return {'error': 'Internal server error'}, 500
     
     # Static files
     @app.route('/static/<path:path>')

@@ -3,56 +3,75 @@ Authentication utilities - Password hashing, JWT token generation, and validatio
 """
 
 import jwt
-import hashlib
 import os
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from flask import request, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
 import logging
+from models import db
 
 logger = logging.getLogger(__name__)
 
-# Secret key for JWT tokens (should be read from environment)
-JWT_SECRET = os.environ.get('JWT_SECRET', 'dev-jwt-secret-change-in-production')
+# JWT configuration constants (read at runtime, not cached at import)
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', 24))
 
 
+def _get_jwt_secret() -> str:
+    """Return the JWT secret, failing fast if not configured.
+    
+    Reads from environment variable at runtime (not cached) to support
+    dynamic configuration during testing and deployment.
+    """
+    secret = os.environ.get('JWT_SECRET')
+    if not secret:
+        raise RuntimeError(
+            "JWT_SECRET environment variable is not set. "
+            "Set it to a cryptographically random value before starting the server."
+        )
+    if len(secret) < 32:
+        raise RuntimeError(
+            "JWT_SECRET must be at least 32 characters long. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+    return secret
+
+
 class PasswordUtils:
     """Password hashing and verification utilities"""
-    
+
     @staticmethod
-    def hash_password(password, salt=None):
+    def hash_password(password, salt=None):  # salt param kept for API compat but ignored
         """
-        Hash password with SHA256 and optional salt.
-        For security, consider using bcrypt in production.
+        Hash password using PBKDF2-SHA256 via Werkzeug (260k iterations).
+        The salt parameter is ignored — Werkzeug generates a secure random salt internally.
         """
-        if salt is None:
-            salt = secrets.token_hex(16)  # Generate random 32-character salt
-        
-        # Create hash of password + salt
-        hash_object = hashlib.sha256(f"{password}{salt}".encode())
-        password_hash = hash_object.hexdigest()
-        
-        # Return hash:salt format for storage
-        return f"{password_hash}:{salt}"
-    
+        return generate_password_hash(password)
+
     @staticmethod
     def verify_password(password, stored_hash):
         """
-        Verify password against stored hash.
-        Stored hash should be in format "hash:salt"
+        Verify password against stored Werkzeug hash.
+        Uses constant-time comparison internally to prevent timing attacks.
+        Also handles legacy SHA-256 'hash:salt' format for migration.
         """
+        if not stored_hash:
+            return False
+        # Werkzeug hashes start with 'pbkdf2:' or 'scrypt:'; legacy start with hex chars
+        if stored_hash.startswith('pbkdf2:') or stored_hash.startswith('scrypt:'):
+            return check_password_hash(stored_hash, password)
+        # Legacy SHA-256 format: "hexhash:salt" — migrate on next login
         try:
-            stored_password_hash, salt = stored_hash.split(':')
-            hash_object = hashlib.sha256(f"{password}{salt}".encode())
-            computed_hash = hash_object.hexdigest()
-            return computed_hash == stored_password_hash
+            import hashlib, hmac as _hmac
+            stored_password_hash, legacy_salt = stored_hash.split(':', 1)
+            computed = hashlib.sha256(f"{password}{legacy_salt}".encode()).hexdigest()
+            return _hmac.compare_digest(computed, stored_password_hash)
         except (ValueError, AttributeError):
             logger.error("Invalid password hash format")
             return False
-    
+
     @staticmethod
     def validate_password_strength(password):
         """
@@ -61,26 +80,98 @@ class PasswordUtils:
         """
         if not password:
             return False, "Password is required"
-        
-        if len(password) < 8:
-            return False, "Password must be at least 8 characters"
-        
+
+        if len(password) < 12:
+            return False, "Password must be at least 12 characters"
+
         if len(password) > 128:
             return False, "Password must be 128 characters or less"
-        
-        # Check for at least one uppercase, one lowercase, one digit
+
         has_upper = any(c.isupper() for c in password)
         has_lower = any(c.islower() for c in password)
         has_digit = any(c.isdigit() for c in password)
-        
+
         if not (has_upper and has_lower and has_digit):
             return False, "Password must contain uppercase, lowercase, and numbers"
-        
+
         return True, None
 
 
 class TokenUtils:
     """JWT token generation and validation"""
+
+    @staticmethod
+    def _ensure_blacklist_table():
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS token_blacklist (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    jti TEXT UNIQUE NOT NULL,
+                    user_id INTEGER,
+                    token_type TEXT DEFAULT 'user',
+                    reason TEXT,
+                    revoked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_token_blacklist_jti ON token_blacklist(jti)')
+            conn.commit()
+        finally:
+            conn.close()
+
+    @staticmethod
+    def _is_token_revoked(jti):
+        """Check token revocation blacklist."""
+        if not jti:
+            return True
+
+        try:
+            TokenUtils._ensure_blacklist_table()
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            try:
+                cursor.execute('SELECT 1 FROM token_blacklist WHERE jti = ? LIMIT 1', (jti,))
+                return cursor.fetchone() is not None
+            finally:
+                conn.close()
+        except Exception as e:
+            logger.warning(f"Token blacklist check failed: {e}")
+            return True
+
+    @staticmethod
+    def revoke_token(token, reason='logout', token_type='user'):
+        """Revoke a JWT by persisting its JTI in token_blacklist."""
+        try:
+            payload = jwt.decode(
+                token,
+                _get_jwt_secret(),
+                algorithms=[JWT_ALGORITHM],
+                options={"verify_exp": False},
+            )
+            jti = payload.get('jti')
+            user_id = payload.get('user_id')
+            if not jti:
+                return False
+
+            TokenUtils._ensure_blacklist_table()
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    '''
+                    INSERT OR IGNORE INTO token_blacklist (jti, user_id, token_type, reason)
+                    VALUES (?, ?, ?, ?)
+                    ''',
+                    (jti, user_id, token_type, reason),
+                )
+                conn.commit()
+                return True
+            finally:
+                conn.close()
+        except Exception as e:
+            logger.warning(f"Failed to revoke token: {e}")
+            return False
     
     @staticmethod
     def generate_token(user_id, username, email, role='user', expires_in_hours=None):
@@ -100,16 +191,18 @@ class TokenUtils:
         if expires_in_hours is None:
             expires_in_hours = JWT_EXPIRATION_HOURS
         
+        now = datetime.now(timezone.utc)
         payload = {
             'user_id': user_id,
             'username': username,
             'email': email,
             'role': role,
-            'iat': datetime.utcnow(),
-            'exp': datetime.utcnow() + timedelta(hours=expires_in_hours)
+            'iat': now,
+            'exp': now + timedelta(hours=expires_in_hours),
+            'jti': secrets.token_hex(16),
         }
-        
-        token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+        token = jwt.encode(payload, _get_jwt_secret(), algorithm=JWT_ALGORITHM)
         logger.debug(f"Generated token for user {username}")
         return token
     
@@ -125,7 +218,10 @@ class TokenUtils:
             Decoded token payload or None if invalid
         """
         try:
-            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            payload = jwt.decode(token, _get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+            if TokenUtils._is_token_revoked(payload.get('jti')):
+                logger.warning("Token revoked")
+                return None
             return payload
         except jwt.ExpiredSignatureError:
             logger.warning("Token expired")
@@ -169,7 +265,7 @@ def require_user_auth(f):
         token = TokenUtils.extract_token_from_header(request)
         
         if not token:
-            return jsonify({'error': 'No token provided', 'hint': 'Include Authorization: Bearer <token> header'}), 401
+            return jsonify({'error': 'Authentication required'}), 401
         
         payload = TokenUtils.verify_token(token)
         
@@ -233,18 +329,21 @@ class SessionTokenUtils:
             'session_id': session_id,
             'nickname': nickname,
             'type': 'session',
+            'jti': secrets.token_hex(16),
             'iat': datetime.utcnow(),
             'exp': datetime.utcnow() + timedelta(hours=expires_in_hours)
         }
-        
-        token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+        token = jwt.encode(payload, _get_jwt_secret(), algorithm=JWT_ALGORITHM)
         return token
     
     @staticmethod
     def verify_session_token(token):
         """Verify session token and return payload"""
         try:
-            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            payload = jwt.decode(token, _get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+            if TokenUtils._is_token_revoked(payload.get('jti')):
+                return None
             return payload
         except jwt.InvalidTokenError:
             return None

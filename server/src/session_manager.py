@@ -4,6 +4,7 @@ Tracks connected users, nicknames, session UUIDs
 """
 
 import uuid
+import sqlite3
 from datetime import datetime, timedelta
 from threading import Lock
 from models import Database
@@ -35,9 +36,9 @@ class SessionManager:
         """
         try:
             session_id = str(uuid.uuid4())
-            now = datetime.now()
+            now = datetime.utcnow()
             expires_at = now + timedelta(seconds=SessionManager.SESSION_TIMEOUT)
-            
+
             session_data = {
                 'session_id': session_id,
                 'nickname': nickname,
@@ -45,32 +46,59 @@ class SessionManager:
                 'expires_at': expires_at.isoformat(),
                 'last_activity': now.isoformat()
             }
-            
-            # Store in memory
-            with SessionManager._session_lock:
-                SessionManager._active_sessions[session_id] = session_data
-            
-            # Store in database
+
             db = Database()
             conn = db.get_connection()
             cursor = conn.cursor()
-            
-            cursor.execute('''
-                INSERT INTO sessions (session_id, nickname, connected_at, expires_at)
-                VALUES (?, ?, ?, ?)
-            ''', (
-                session_id,
-                nickname,
-                now,
-                expires_at
-            ))
-            
-            conn.commit()
-            conn.close()
+
+            try:
+                # Serialize create-session checks and writes to prevent nickname races.
+                cursor.execute('BEGIN IMMEDIATE')
+
+                # Expire stale sessions first so nickname checks use current active set.
+                cursor.execute('''
+                    UPDATE sessions
+                    SET disconnected_at = ?
+                    WHERE disconnected_at IS NULL AND expires_at IS NOT NULL AND expires_at <= ?
+                ''', (now, now))
+
+                cursor.execute('''
+                    SELECT 1 FROM sessions
+                    WHERE disconnected_at IS NULL
+                      AND (expires_at IS NULL OR expires_at > ?)
+                      AND LOWER(nickname) = LOWER(?)
+                    LIMIT 1
+                ''', (now, nickname))
+
+                if cursor.fetchone():
+                    conn.rollback()
+                    logger.warning(f"Nickname collision attempted: {nickname}")
+                    return {'error': 'nickname_taken', 'message': 'That nickname is already in use'}
+
+                cursor.execute('''
+                    INSERT INTO sessions (session_id, nickname, connected_at, expires_at, last_activity)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (
+                    session_id,
+                    nickname,
+                    now,
+                    expires_at,
+                    now,
+                ))
+
+                conn.commit()
+            finally:
+                conn.close()
+
+            with SessionManager._session_lock:
+                SessionManager._active_sessions[session_id] = session_data
             
             logger.info(f"Created session {session_id} for {nickname}")
             return session_data
         
+        except sqlite3.IntegrityError:
+            logger.warning(f"Session creation collision for nickname: {nickname}")
+            return {'error': 'nickname_taken', 'message': 'That nickname is already in use'}
         except Exception as e:
             logger.error(f"Error creating session: {e}")
             return None
@@ -106,7 +134,7 @@ class SessionManager:
             
             cursor.execute('''
                 SELECT * FROM sessions
-                WHERE session_id = ? AND expires_at > datetime('now')
+                WHERE session_id = ? AND disconnected_at IS NULL AND expires_at > datetime('now')
             ''', (session_id,))
             
             row = cursor.fetchone()
@@ -136,38 +164,63 @@ class SessionManager:
             new_nickname: New nickname
             
         Returns:
-            bool: Success
+            dict: {'ok': True} on success or {'error': '<reason>'} on failure
         """
         try:
-            session = SessionManager.get_session(session_id)
-            if not session:
-                return False
-            
-            # Update memory
+            now = datetime.utcnow()
+
+            # Update database in a serialized transaction to prevent nickname collisions.
+            db = Database()
+            conn = db.get_connection()
+            cursor = conn.cursor()
+
+            try:
+                cursor.execute('BEGIN IMMEDIATE')
+
+                cursor.execute('''
+                    SELECT 1 FROM sessions
+                    WHERE session_id = ?
+                      AND disconnected_at IS NULL
+                      AND (expires_at IS NULL OR expires_at > ?)
+                    LIMIT 1
+                ''', (session_id, now))
+                if not cursor.fetchone():
+                    conn.rollback()
+                    return {'error': 'session_not_found'}
+
+                cursor.execute('''
+                    SELECT 1 FROM sessions
+                    WHERE disconnected_at IS NULL
+                      AND (expires_at IS NULL OR expires_at > ?)
+                      AND LOWER(nickname) = LOWER(?)
+                      AND session_id != ?
+                    LIMIT 1
+                ''', (now, new_nickname, session_id))
+                if cursor.fetchone():
+                    conn.rollback()
+                    return {'error': 'nickname_taken'}
+
+                cursor.execute('''
+                    UPDATE sessions
+                    SET nickname = ?, updated_at = datetime('now')
+                    WHERE session_id = ?
+                ''', (new_nickname, session_id))
+
+                conn.commit()
+            finally:
+                conn.close()
+
+            # Update memory cache only after DB commit succeeds.
             with SessionManager._session_lock:
                 if session_id in SessionManager._active_sessions:
                     SessionManager._active_sessions[session_id]['nickname'] = new_nickname
             
-            # Update database
-            db = Database()
-            conn = db.get_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                UPDATE sessions
-                SET nickname = ?, updated_at = datetime('now')
-                WHERE session_id = ?
-            ''', (new_nickname, session_id))
-            
-            conn.commit()
-            conn.close()
-            
             logger.info(f"Updated session {session_id} nickname to {new_nickname}")
-            return True
+            return {'ok': True}
         
         except Exception as e:
             logger.error(f"Error updating nickname: {e}")
-            return False
+            return {'error': 'update_failed'}
     
     @staticmethod
     def update_activity(session_id):

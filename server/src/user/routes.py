@@ -18,6 +18,12 @@ logger = logging.getLogger(__name__)
 user_bp = Blueprint('user', __name__, url_prefix='/api/user')
 
 
+def _json_body():
+    """Return parsed JSON body or None if body is not valid JSON object."""
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else None
+
+
 @user_bp.route('/features', methods=['GET'])
 @limiter.limit("60/minute")
 def get_feature_flags():
@@ -43,7 +49,9 @@ def join_community():
     Returns: {session_id, nickname, connected_at, message}
     """
     try:
-        data = request.get_json()
+        data = _json_body()
+        if data is None:
+            return jsonify({'error': 'JSON body required'}), 400
         nickname = data.get('nickname', '').strip()
         
         # Validate nickname
@@ -65,6 +73,9 @@ def join_community():
         session_data = SessionManager.create_session(nickname)
         if not session_data:
             return jsonify({'error': 'Failed to create session'}), 500
+
+        if session_data.get('error') == 'nickname_taken':
+            return jsonify({'error': session_data['message']}), 409
         
         # Store session ID in Flask session for tracking
         session['session_id'] = session_data['session_id']
@@ -128,11 +139,14 @@ def change_nickname():
     Returns: {session_id, nickname, message}
     """
     try:
-        session_id = session.get('session_id') or request.get_json().get('session_id')
+        data = _json_body()
+        if data is None:
+            return jsonify({'error': 'JSON body required'}), 400
+
+        session_id = session.get('session_id') or data.get('session_id')
         if not session_id:
             return jsonify({'error': 'No active session'}), 401
-        
-        data = request.get_json()
+
         new_nickname = data.get('new_nickname', '').strip()
         
         # Validate new nickname
@@ -153,9 +167,13 @@ def change_nickname():
         
         # Update nickname
         old_nickname = session_data['nickname']
-        success = SessionManager.update_nickname(session_id, new_nickname)
-        
-        if not success:
+        result = SessionManager.update_nickname(session_id, new_nickname)
+
+        if result.get('error') == 'nickname_taken':
+            return jsonify({'error': 'That nickname is already in use'}), 409
+        if result.get('error') == 'session_not_found':
+            return jsonify({'error': 'Session expired or invalid'}), 401
+        if not result.get('ok'):
             return jsonify({'error': 'Failed to update nickname'}), 500
         
         logger.info(f"User changed nickname from {old_nickname} to {new_nickname}")
@@ -181,7 +199,11 @@ def disconnect():
     Returns: {message}
     """
     try:
-        session_id = session.get('session_id') or request.get_json().get('session_id')
+        data = _json_body()
+        if data is None:
+            return jsonify({'error': 'JSON body required'}), 400
+
+        session_id = session.get('session_id') or data.get('session_id')
         if not session_id:
             return jsonify({'error': 'No active session'}), 401
         
@@ -274,11 +296,14 @@ def block_user():
     Returns: {status: ok, blocked_users: [...]}
     """
     try:
-        session_id = request.args.get('session_id') or request.get_json().get('session_id')
+        data = _json_body()
+        if data is None:
+            return jsonify({'error': 'JSON body required'}), 400
+
+        session_id = request.args.get('session_id') or data.get('session_id')
         if not session_id:
             return jsonify({'error': 'No active session'}), 401
-        
-        data = request.get_json()
+
         blocked_nickname = data.get('blocked_nickname', '').strip()
         reason = data.get('reason', '').strip() or None
         
@@ -318,11 +343,14 @@ def unblock_user():
     Returns: {status: ok, blocked_users: [...]}
     """
     try:
-        session_id = request.args.get('session_id') or request.get_json().get('session_id')
+        data = _json_body()
+        if data is None:
+            return jsonify({'error': 'JSON body required'}), 400
+
+        session_id = request.args.get('session_id') or data.get('session_id')
         if not session_id:
             return jsonify({'error': 'No active session'}), 401
-        
-        data = request.get_json()
+
         blocked_nickname = data.get('blocked_nickname', '').strip()
         
         # Validate
@@ -395,7 +423,7 @@ def register_user():
     Returns: {user_id, username, email, message, token}
     """
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
         
         if not data:
             return jsonify({'error': 'Request body required'}), 400
@@ -494,7 +522,7 @@ def login_user():
     Returns: {user_id, username, email, token, message}
     """
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
         
         if not data:
             return jsonify({'error': 'Request body required'}), 400
@@ -591,7 +619,7 @@ def change_password():
     Returns: {message}
     """
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
         
         if not data:
             return jsonify({'error': 'Request body required'}), 400
@@ -633,16 +661,41 @@ def change_password():
         )
         conn.commit()
         conn.close()
+
+        token = TokenUtils.extract_token_from_header(request)
+        if token:
+            TokenUtils.revoke_token(token, reason='password_changed')
         
         logger.info(f"Password changed for user: {user_data['username']}")
         
         return jsonify({
-            'message': 'Password changed successfully'
+            'message': 'Password changed successfully. Please log in again.'
         }), 200
     
     except Exception as e:
         logger.error(f"Error changing password: {e}")
         return jsonify({'error': 'Failed to change password'}), 500
+
+
+@user_bp.route('/logout', methods=['POST'])
+@require_user_auth
+@limiter.limit("30/minute")
+def logout_user():
+    """Logout user by revoking the presented JWT token."""
+    try:
+        token = TokenUtils.extract_token_from_header(request)
+        if not token:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        TokenUtils.revoke_token(token, reason='user_logout')
+
+        return jsonify({
+            'message': 'Logged out successfully'
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error logging out user: {e}")
+        return jsonify({'error': 'Logout failed'}), 500
 
 
 @user_bp.route('/verify-token', methods=['GET'])

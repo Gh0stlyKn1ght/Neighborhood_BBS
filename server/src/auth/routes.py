@@ -36,16 +36,14 @@ def require_admin_password(f):
             logger.warning(f"Admin endpoint called without password: {request.path}")
             return jsonify({
                 'status': 'error',
-                'error': 'Admin authentication required',
-                'hint': 'Include X-Admin-Password header'
+                'error': 'Admin authentication required'
             }), 401
         
         if not SetupConfig.verify_admin_password(admin_password):
             logger.warning(f"Admin endpoint called with invalid password: {request.path}")
             return jsonify({
                 'status': 'error',
-                'error': 'Invalid admin password',
-                'hint': 'Check X-Admin-Password header'
+                'error': 'Invalid credentials'
             }), 403
         
         return f(*args, **kwargs)
@@ -122,7 +120,9 @@ def validate_passcode():
     5. Client connects to WebSocket with session_id
     """
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         
         # Get inputs
         provided_passcode = data.get('passcode', '').strip()
@@ -153,9 +153,12 @@ def validate_passcode():
         
         # Create session with validated passcode
         session_data = SessionManager.create_session(nickname)
-        
+
         if not session_data:
             return jsonify({'error': 'Failed to create session'}), 500
+
+        if session_data.get('error') == 'nickname_taken':
+            return jsonify({'error': session_data['message']}), 409
         
         logger.info(f"Session created via passcode auth: {session_data['session_id']} for {nickname}")
         
@@ -202,7 +205,9 @@ def open_join():
         if access_mode != 'open':
             return jsonify({'error': 'Open access not enabled in this mode'}), 403
         
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         nickname = data.get('nickname', '').strip()
         
         # Validate nickname
@@ -214,9 +219,12 @@ def open_join():
         
         # Create session directly (no auth)
         session_data = SessionManager.create_session(nickname)
-        
+
         if not session_data:
             return jsonify({'error': 'Failed to create session'}), 500
+
+        if session_data.get('error') == 'nickname_taken':
+            return jsonify({'error': session_data['message']}), 409
         
         logger.info(f"Session created via open join: {session_data['session_id']} for {nickname}")
         
@@ -237,6 +245,7 @@ def open_join():
 # Admin endpoints
 
 @auth_bp.route('/admin/passcode-status', methods=['GET'])
+@require_admin_password
 @limiter.limit("30/minute")
 def admin_get_passcode_status():
     """
@@ -256,8 +265,6 @@ def admin_get_passcode_status():
     - Verifies system is in passcode mode
     """
     try:
-        # TODO: Add admin auth check (would check X-Admin-Password or JWT)
-        
         status = passcode_service.get_passcode_status()
         
         return jsonify({
@@ -271,6 +278,7 @@ def admin_get_passcode_status():
 
 
 @auth_bp.route('/admin/reset-passcode', methods=['POST'])
+@require_admin_password
 @limiter.limit("5/minute")
 def admin_reset_passcode():
     """
@@ -307,9 +315,10 @@ def admin_reset_passcode():
     - New passcode must be 4-50 characters
     """
     try:
-        # TODO: Add admin auth check (would check X-Admin-Password or JWT)
-        
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
+
         new_passcode = data.get('new_passcode', '').strip()
         disconnect_users = data.get('disconnect_users', True)
         
@@ -380,7 +389,9 @@ def request_approval():
         if not approval_service.is_approval_required():
             return jsonify({'error': 'Approval not required in this mode'}), 400
         
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         nickname = data.get('nickname', '').strip()
         request_reason = data.get('request_reason', '').strip()
         
@@ -472,7 +483,9 @@ def create_approved_session():
     - User connects to WebSocket with session_id
     """
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         nickname = data.get('nickname', '').strip()
         
         # Validate nickname
@@ -574,7 +587,9 @@ def admin_approve_user():
     """
     try:
         
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         nickname = data.get('nickname', '').strip()
         
         if not nickname:
@@ -631,7 +646,9 @@ def admin_reject_user():
     """
     try:
         
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         nickname = data.get('nickname', '').strip()
         reason = data.get('reason', '').strip()
         

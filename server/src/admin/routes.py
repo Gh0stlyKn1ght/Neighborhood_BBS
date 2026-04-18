@@ -21,7 +21,9 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 def admin_login():
     """Authenticate admin user"""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         username = data.get('username')
         password = data.get('password')
         
@@ -38,6 +40,7 @@ def admin_login():
             return jsonify({'error': 'Invalid credentials'}), 401
         
         # Create session
+        session.permanent = True
         session['admin_id'] = admin_user['id']
         session['admin_username'] = admin_user['username']
         session['admin_role'] = admin_user['role']
@@ -56,8 +59,8 @@ def admin_login():
         }), 200
     
     except Exception as e:
-        logger.error(f"Admin login error: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Admin login error: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/logout', methods=['POST'])
@@ -88,8 +91,8 @@ def get_current_admin():
         }), 200
     
     except Exception as e:
-        logger.error(f"Error fetching admin info: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching admin info: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 # ==================== DEVICE BAN MANAGEMENT ====================
@@ -99,7 +102,9 @@ def get_current_admin():
 def ban_device():
     """Ban a device"""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         device_id = data.get('device_id')
         device_type = data.get('device_type', 'unknown')
         mac_address = data.get('mac_address')
@@ -136,8 +141,8 @@ def ban_device():
         }), 201
     
     except Exception as e:
-        logger.error(f"Error banning device: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error banning device: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/devices/bans', methods=['GET'])
@@ -154,11 +159,12 @@ def get_banned_devices():
         }), 200
     
     except Exception as e:
-        logger.error(f"Error fetching banned devices: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching banned devices: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/devices/check/<device_id>', methods=['GET'])
+@admin_required
 @limiter.limit("30/minute")
 def check_device_ban(device_id):
     """Check if device is banned"""
@@ -176,11 +182,12 @@ def check_device_ban(device_id):
         return jsonify({'is_banned': False}), 200
     
     except Exception as e:
-        logger.error(f"Error checking device ban: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error checking device ban: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/devices/check-ip/<ip_address>', methods=['GET'])
+@admin_required
 @limiter.limit("30/minute")
 def check_ip_ban(ip_address):
     """Check if IP address is banned"""
@@ -199,8 +206,8 @@ def check_ip_ban(ip_address):
         return jsonify({'is_banned': False}), 200
     
     except Exception as e:
-        logger.error(f"Error checking IP ban: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error checking IP ban: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/devices/unban/<device_id>', methods=['POST'])
@@ -217,8 +224,8 @@ def unban_device(device_id):
         }), 200
     
     except Exception as e:
-        logger.error(f"Error unbanning device: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error unbanning device: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 # ==================== NETWORK CONFIGURATION ====================
@@ -236,8 +243,8 @@ def get_network_configs():
         }), 200
     
     except Exception as e:
-        logger.error(f"Error fetching network configs: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching network configs: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/network/config/<setting_name>', methods=['GET'])
@@ -253,8 +260,8 @@ def get_network_config(setting_name):
         return jsonify(config), 200
     
     except Exception as e:
-        logger.error(f"Error fetching network config: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching network config: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/network/config', methods=['POST'])
@@ -263,7 +270,9 @@ def get_network_config(setting_name):
 def set_network_config():
     """Set network configuration"""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         setting_name = data.get('setting_name')
         setting_value = data.get('setting_value')
         setting_type = data.get('setting_type', 'string')
@@ -296,7 +305,7 @@ def set_network_config():
     
     except Exception as e:
         logger.error(f"Error setting network config: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 # ==================== THEME MANAGEMENT ====================
@@ -315,8 +324,8 @@ def get_themes():
         }), 200
     
     except Exception as e:
-        logger.error(f"Error fetching themes: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching themes: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/themes/active', methods=['GET'])
@@ -332,7 +341,7 @@ def get_active_theme():
     
     except Exception as e:
         logger.error(f"Error fetching active theme: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/themes', methods=['POST'])
@@ -340,7 +349,9 @@ def get_active_theme():
 def create_theme():
     """Create a new theme"""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         theme_name = data.get('theme_name')
         primary_color = data.get('primary_color', '#007bff')
         secondary_color = data.get('secondary_color', '#6c757d')
@@ -372,7 +383,7 @@ def create_theme():
     
     except Exception as e:
         logger.error(f"Error creating theme: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/themes/<int:theme_id>/activate', methods=['POST'])
@@ -390,7 +401,7 @@ def activate_theme(theme_id):
     
     except Exception as e:
         logger.error(f"Error activating theme: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/themes/<int:theme_id>', methods=['PUT'])
@@ -398,7 +409,9 @@ def activate_theme(theme_id):
 def update_theme(theme_id):
     """Update theme settings"""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         
         # Extract only updateable fields
         updates = {}
@@ -419,7 +432,7 @@ def update_theme(theme_id):
     
     except Exception as e:
         logger.error(f"Error updating theme: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/themes/<int:theme_id>', methods=['DELETE'])
@@ -438,7 +451,7 @@ def delete_theme(theme_id):
     
     except Exception as e:
         logger.error(f"Error deleting theme: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 # ==================== ADMIN DASHBOARD ====================
@@ -467,7 +480,7 @@ def get_dashboard():
     
     except Exception as e:
         logger.error(f"Error fetching dashboard: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 # ==================== CHAT LOG MANAGEMENT ====================
@@ -490,7 +503,7 @@ def get_chat_log_retention():
     
     except Exception as e:
         logger.error(f"Error fetching chat log retention: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/chat-logs/retention', methods=['POST'])
@@ -501,7 +514,9 @@ def set_chat_log_retention():
     try:
         from utils.chat_log_manager import set_chat_log_retention
         
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'error': 'JSON body required'}), 400
         retention_days = data.get('retention_days', 30)
         
         if not isinstance(retention_days, int) or retention_days < 1 or retention_days > 365:
@@ -520,7 +535,7 @@ def set_chat_log_retention():
     
     except Exception as e:
         logger.error(f"Error setting chat log retention: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/chat-logs/delete-now', methods=['POST'])
@@ -543,7 +558,7 @@ def delete_chat_logs_now():
     
     except Exception as e:
         logger.error(f"Error deleting chat logs: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @admin_bp.route('/hardware-logs', methods=['GET'])
@@ -565,4 +580,4 @@ def get_hardware_logs():
     
     except Exception as e:
         logger.error(f"Error fetching hardware logs: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500

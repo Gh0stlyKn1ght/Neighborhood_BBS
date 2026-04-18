@@ -51,7 +51,7 @@ def get_rooms():
         }), 200
     except Exception as e:
         logger.error(f"Error getting rooms: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @chat_bp.route('/rooms/<int:room_id>/messages', methods=['GET'])
@@ -131,12 +131,12 @@ def send_message():
         if len(text) > 5000:
             return jsonify({'error': 'Message too long (max 5000 chars)'}), 400
         
-        # Validate session
-        session = SessionManager.get_session(session_id)
-        if not session:
+        # Validate session — renamed to user_session to avoid shadowing Flask's session
+        user_session = SessionManager.get_session(session_id)
+        if not user_session:
             return jsonify({'error': 'Session invalid or expired'}), 401
         
-        nickname = session['nickname']
+        nickname = user_session['nickname']
         
         # Save message
         message = privacy_handler.save_message(
@@ -816,8 +816,14 @@ def on_change_nickname(data):
         old_nickname = session['nickname']
         
         # Update nickname
-        success = SessionManager.update_nickname(session_id, new_nickname)
-        if not success:
+        result = SessionManager.update_nickname(session_id, new_nickname)
+        if result.get('error') == 'nickname_taken':
+            emit('error', {'message': 'That nickname is already in use'})
+            return
+        if result.get('error') == 'session_not_found':
+            emit('error', {'message': 'Session expired'})
+            return
+        if not result.get('ok'):
             emit('error', {'message': 'Failed to change nickname'})
             return
         
