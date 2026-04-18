@@ -188,6 +188,49 @@ type = sqlite
 path = data/neighborhood.db
 ```
 
+## 🔐 Security
+
+Neighborhood BBS includes layered security controls for authentication, session handling, and request protection.
+
+### Security Features
+
+- Password hashing with PBKDF2 (Werkzeug)
+- JWT validation with token revocation blacklist support
+- CSRF protection for mutating routes (`POST`, `PUT`, `PATCH`, `DELETE`)
+- Atomic session creation logic to prevent nickname race collisions
+- Regex safety controls in moderation (pattern validation, timeout guard, auto-disable fallback)
+- Sanitized error responses (no traceback leakage to clients)
+- Secure session cookie defaults:
+  - `HttpOnly = True`
+  - `SameSite = Strict`
+  - `Secure = True` (recommended for HTTPS deployments)
+- Security headers including `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, and CSP
+
+### Production Security Checklist
+
+Before deployment, ensure:
+
+1. `SECRET_KEY` is set to a strong random value.
+2. `JWT_SECRET` is set to a strong random value.
+3. HTTPS is enabled in front of the app.
+4. `SESSION_COOKIE_SECURE=true` is set in production.
+5. A persistent rate-limit backend (for example Redis) is configured instead of in-memory storage.
+6. Regular backup and restore testing is in place for the database.
+
+Generate strong secrets with:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+### Security Documentation
+
+- [Security Policy](SECURITY.md)
+- [Final Security Audit](SECURITY_AUDIT_FINAL.md)
+- [Security Framework](PRIVACY_SECURITY_FRAMEWORK.md)
+- [API Privacy Endpoints](PRIVACY_API_ENDPOINTS.md)
+- [Endpoint Validation Report](TEST_REPORT.md)
+
 ## 💻 Development
 
 ### Setting up the Development Environment
